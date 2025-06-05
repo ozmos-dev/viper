@@ -1,14 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createFilter } from "vite";
-import type { Plugin } from "vite";
-import { Viper } from "./viper";
-import { readDir } from "./util";
+import { readDir } from "./util.js";
+import { Viper } from "./viper.js";
 
-export default async function viperPlugin(options = {}): Promise<Plugin> {
+export default async function viperPlugin(options = {}) {
   const viper = await Viper.make();
 
-  function isPage(id: string) {
+  function isPage(id) {
     const filter = createFilter("**/*.vue");
 
     return filter(id) && id.startsWith(viper.absolutePagesDirectory());

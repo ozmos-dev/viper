@@ -2,25 +2,20 @@ import { exec, execSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { type ViteDevServer, createFilter } from "vite";
+import { createFilter } from "vite";
 
 const execAsync = promisify(exec);
 
 const PHP_REGEX = /<php>([\s\S]*?)<\/php>/g;
 
-interface Config {
-  output_path: string;
-  pages_path: string;
-  include: string;
-  exclude: string;
-}
-
 export class Viper {
-  static instance: Viper | null = null;
-  public devServer: ViteDevServer | null = null;
-  public routes: string[] = [];
+  static instance = null;
+  devServer = null;
+  routes = [];
 
-  constructor(public config: Config) {}
+  constructor(config) {
+    this.config = config;
+  }
 
   static async make() {
     if (Viper.instance) {
@@ -46,11 +41,11 @@ export class Viper {
     return path.resolve(this.relativePagesDirectory());
   }
 
-  absoluteOutputPath(parts: string[] = []) {
+  absoluteOutputPath(parts = []) {
     return path.resolve(this.config.output_path, ...parts);
   }
 
-  async compileFile(id: string, content: string, generateTypes = true) {
+  async compileFile(id, content, generateTypes = true) {
     const filter = createFilter("**/*.vue");
 
     if (!filter(id) || !id.startsWith(this.absolutePagesDirectory())) {

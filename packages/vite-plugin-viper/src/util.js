@@ -1,11 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-export function trimSlashes(str: string) {
+export function trimSlashes(str) {
   return str.replace(/^\/+|\/+$/g, "");
 }
 
-export async function readDir(dir: string): Promise<string[]> {
+export async function readDir(dir) {
   const paths = [];
   const files = await fs.readdir(path.resolve(dir), {
     withFileTypes: true,
