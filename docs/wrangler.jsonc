@@ -1,0 +1,7 @@
+{
+  "name": "viper-docs",
+  "compatibility_date": "2025-07-05",
+  "assets": {
+    "directory": "./dist"
+  }
+}

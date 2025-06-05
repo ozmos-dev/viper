@@ -1,0 +1,53 @@
+---
+title: How it works
+---
+
+Before we get started let's get one thing clear.
+
+Viper DOES NOT run php in the browser!
+
+No php ever makes it to the frontend. There is no php -> js step.
+
+Viper extracts your colocated php and javascript code and puts it in the right places to create an awesome developer experience.
+
+Here's how it works:
+
+## Vite Bundling
+
+Whether you run the vite dev server or build for production our vite plugin will grab any file listed in your `pages_path` (defaults to `resources/js/pages`) and strip the PHP out of it so the regular vue plugin can process your code as normal.
+
+The plugin will also then call the command
+
+```bash
+php artisan viper:compile --filename="the_file_path_we_are_processing"
+```
+
+Which takes the php code from your component and places it into the compiled directory (defaults to `.viper/`). We also add a class name and namespace to the extracted class for easier typescript generation.
+
+After compiling all the required files a subsequent command is then run to generate the Vue Router configuration into `@/pages/routes.ts`.
+
+```bash
+php artisan viper:generate
+```
+
+## Handling Requests
+
+Laravel discovers your file based routes through the call to `Viper::routes()` found in `routes/web.php`. This function loops through your `pages_path` and registers `GET` and `POST` handlers for each page it comes across.
+
+When a request comes in to load one of the pages Laravel then calls our GET handler which grabs all the props and actions from that page (and all parent layouts) to then render as a json string in your root blade file (`app.blade.php`).
+
+Props are passed as-is but actions are only passed as string references to the names of the method.
+
+The server is now done with the initial request and Vue takes over.
+
+The vue router will see the URL served by Laravel and load the matching Vue component.
+
+Our Vue plugin will look for any props present on the inital page load and automatically populate the `@tanstack/vue-query` cache so that the data is  available on first render for your components.
+
+## Calling Actions
+
+When you call an action, a POST request is made to the current page URL which Laravel will then call the POST handler that was registered earlier.
+
+The body of the request is whatever you passed to mutate functions (or the state if using helpers like `useForm`) to make it easy for you to use standard Laravel request validation. An `X-Viper-Action` header is passed with the name of the action we are trying to call.
+
+Viper will look for an action matching that header on the current page or any layouts higher in the tree, invoke the action, and return the response.

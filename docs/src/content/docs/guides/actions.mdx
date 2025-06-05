@@ -1,0 +1,248 @@
+---
+title: Actions
+---
+
+Actions are provided to your pages via method attributes. Call the actions from vue via wrappers around `@tanstack/vue-query` useMutation hooks.
+
+```vue
+<template>
+  <button @click="mutate({ first: 10, second: 20 })" :disabled="isPending">
+    Add
+  </button>
+  <p v-if="data">{{ data }}</p>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.Example>();
+
+const { mutate, data, isPending } = page.useMutation('add');
+</script>
+
+<php>
+use \App\Dto\UserDto;
+use \App\Dto\CreateUserDto;
+
+return new class {
+  #[\Ozmos\Viper\Attrs\Action]
+  public function add(): int
+  {
+    $data = request()->validate([
+      'first' => ['required', 'integer'],
+      'second' => ['required', 'integer'],
+    ]);
+
+    return $data['first'] + $data['second'];
+  }
+};
+</php>
+```
+
+## useForm Helper
+
+A `useForm` helper is provided to make working with forms a breeze. This gives you an extra `state` ref for your form and `errors` for any 422 errors returned by laravel.
+
+```vue
+<template>
+  <form method="post" @submit.prevent="mutate()">
+    <input v-model="state.email" />
+    <p v-if="errors.email">{{ errors.email }}</p>
+    <button type="submit" :disabled="isPending">Login</button>
+  </form>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+import { router } from '@/pages/routes';
+
+const page = usePage<ViperGen.Example>();
+
+const { state, mutate, errors, isPending } = page.useForm('login', {
+  state: {
+    email: "",
+  },
+  onSuccess() {
+    router.push('/home');
+  },
+});
+</script>
+
+<php>
+use \App\Dto\UserDto;
+
+return new class {
+  #[\Ozmos\Viper\Attrs\Action]
+  public function login()
+  {
+    // you would hopefully add password validation
+    $data = request()->validate([
+      'email' => ['required', 'string', 'email'],
+    ]);
+
+    auth()->login(\App\Models\User::whereEmail($data['email'])->first());
+  }
+};
+</php>
+```
+
+## Form Data / File Uploads
+
+Files can be uploaded alongside other form state using the `useFormData` hook.
+
+This feature ONLY WORKS when injecting a DTO to be validated.
+
+```vue
+<template>
+  <form method="post" @submit.prevent="mutate()">
+    <input v-model="state.email" />
+    <input @change="state.photo = $event.target.files[0]" />
+    <button type="submit" :disabled="isPending">Update Profile</button>
+  </form>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+import { router } from '@/pages/routes';
+
+const page = usePage<ViperGen.Example>();
+
+const { state, mutate, errors, isPending } = page.useFormData('submit', {
+  state: {
+    email: "",
+    photo: null,
+  },
+  files: ['photo'],
+  onSuccess() {
+    router.push('/home');
+  },
+});
+</script>
+
+<php>
+use \App\Dto\CreateUserDto;
+
+return new class {
+  #[\Ozmos\Viper\Attrs\Action]
+  public function submit(CreateUserDto $data)
+  {
+    request()->user()->update($data);
+  }
+};
+
+// create user DTO would look like
+
+#[TypeScript]
+class CreateUserDto extends Data
+{
+  use \Ozmos\Viper\Traits\ValidatesFormData;
+
+  public function __construct(
+    #[\Ozmos\Viper\Attrs\FormDataValue]
+    public string $email,
+    public ?UploadedFile $photo = null
+  ) {}
+}
+</php>
+```
+
+The way this works is that when the request is made we submit form data that has a single key called state with the json stringify of your state object, and then items for each file.
+
+```
+--- boundary name="state"
+"{ email: \"test@test.com\" }"
+
+--- boundary name="photo"
+...binary data
+```
+
+When the request comes in we can `json_decode($request->state, true)` and then validate it as if it was the root request body in the first place.
+
+The benefit of doing it this way is you don't have to work within the limits of regular formdata values.
+
+## Middleware
+
+Any route middleware applied to the page or previous layouts will apply to the action.
+
+## Container Injection
+
+Action functions are proxied through `app()->call(...)` and can take advantage of Laravel's service container.
+
+```vue
+<template>
+  <button @click="form.mutate()">Perform Action</button>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.Example>();
+
+const form = page.useMutation('name');
+</script>
+
+<php>
+return new class {
+  #[\Ozmos\Viper\Attrs\Action]
+  public function name(\Illuminate\Http\Request $request): string
+  {
+    // ... use $request
+  }
+};
+</php>
+```
+
+## TypeScript
+
+Requests can be typed in php and autocompleted within vue's mutate function (request) and data ref (response).
+
+Only DTO's are supported at the moment. Laravel's built in form requests cannot be typed at this time.
+
+```vue
+<template>
+  <form method="post" @submit.prevent="form.mutate()">
+    <input v-model="form.state.value.email" />
+    <p v-if="form.errors.value.email">{{ form.errors.value.email }}</p>
+    <button type="submit" :disabled="form.isPending.value">Register</button>
+  </form>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+import { router } from '@/pages/routes';
+
+const page = usePage<ViperGen.Example>();
+
+const form = page.useForm('register', {
+  state: {
+    email: "",
+  },
+  onSuccess(data) {
+    // data typed to App.Dto.UserDto
+    router.push('/home');
+  },
+});
+</script>
+
+<php>
+use \App\Dto\UserDto;
+use \App\Dto\CreateUserDto;
+
+return new class {
+  #[\Ozmos\Viper\Attrs\Action]
+  public function register(CreateUserDto $data): UserDto
+  {
+    // you would hopefully add password validation
+    $user = \App\Models\User::create($data);
+
+    auth()->login($user);
+
+    return UserDto::from($user);
+  }
+};
+</php>
+```
+
+See the [generating types](/guides/typescript) page for more info.
+
+

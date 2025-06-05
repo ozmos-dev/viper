@@ -1,0 +1,208 @@
+---
+title: Installation
+---
+import {Aside} from "@astrojs/starlight/components";
+
+<Aside type={'caution'}>
+  Viper is still in active development and you may encounter strange behaviour or breaking changes until it hits 1.0 release
+
+  Only use in production if you are feeling brave
+</Aside>
+
+## Starter Kits
+
+The fastest way to get started with Viper is to generate a new application using our starter kit:
+
+```bash
+laravel new app --using=ozmos/viper-vue-shadcn
+cd app && bun i && composer dev
+```
+
+## Install Into a Fresh App
+
+Below are the instructions for installing Viper WITHOUT using a starter kit.
+
+### Backend / Laravel
+
+Create a new laravel app without existing templates/starter kits.
+
+```
+laravel new app
+```
+
+Install the Viper Laravel plugin as well as required dependencies
+
+```bash
+composer require ozmos/viper spatie/laravel-data spatie/typescript-transformer spatie/laravel-typescript-transformer tightenco/ziggy
+```
+
+Register the routes
+
+```php
+// routes/web.php
+\Ozmos\Viper\Facades\Viper::routes();
+```
+
+Register the middleware
+
+```php
+// bootstrap/app.php
+return Application::configure(basePath: dirname(__DIR__))
+  ->withRouting(
+    // ...
+  )
+  ->withMiddleware(function (Middleware $middleware) {
+    $middleware->web(
+      append: [\Ozmos\Viper\Middleware\HandleViperRequests::class]
+    );
+  })
+  ->withExceptions(function (Exceptions $exceptions) {
+    // ...
+  })
+  ->create();
+
+```
+
+Create the base layout file:
+
+```blade
+// resources/views/app.blade.php
+<html lang="en">
+<head>
+    @viperHead
+    @routes
+    @vite(['resources/js/app.ts'])
+</head>
+<body>
+    @viper
+</body>
+</html>
+```
+
+Add the needed typescript transformer config
+
+```
+php artisan vendor:publish --provider="Spatie\LaravelTypeScriptTransformer\TypeScriptTransformerServiceProvider"
+```
+
+```php
+// config/typescript-transformer.php
+<?php
+
+return [
+  // add the compiled path to type discovery
+  'auto_discover_types' => [app_path(), base_path('.viper/compiled')],
+
+  'collectors' => [
+    Spatie\TypeScriptTransformer\Collectors\DefaultCollector::class,
+    Spatie\TypeScriptTransformer\Collectors\EnumCollector::class,
+    // add the Viper collector
+    Ozmos\Viper\Collectors\PageCollector::class,
+  ],
+
+  // optional but recommended, place the ts file in the js folder
+  'output_file' => resource_path('js/types/generated.d.ts'),
+];
+```
+
+### Frontend / Vue
+
+Install the required npm packages
+
+```bash
+bun add @ozmos/viper-vue @ozmos/vite-plugin-viper vue vue-router @tanstack/vue-query ziggy-js @vitejs/plugin-vue
+```
+
+Register the viper vite plugin BEFORE the vue plugin
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
+import vue from '@vitejs/plugin-vue';
+import viper from '../viper/packages/vite-plugin-viper/src/index';
+
+export default defineConfig({
+  plugins: [
+    laravel({
+      input: ['resources/css/app.css', 'resources/js/app.ts'],
+      refresh: true,
+    }),
+    tailwindcss(),
+    viper(),
+    vue(),
+  ],
+});
+```
+
+Create your entry file `resources/js/app.ts`
+
+```ts
+import { createApp, h } from 'vue';
+import { RouterView } from 'vue-router';
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
+import { ViperPlugin } from '@ozmos/viper-vue';
+import { router } from './pages/routes';
+
+const queryClient = new QueryClient();
+
+createApp({ render: () => h(RouterView) })
+  .use(router)
+  .use(VueQueryPlugin, { queryClient })
+  .use(ViperPlugin, {
+    router,
+    queryClient,
+    formatTitle: title => title || 'Laravel',
+  })
+  .mount(document.getElementById('app')!);
+```
+
+Create a stub `pages/routes.ts` file so that it doesn't error during first build. This will get replaced once you run the vite server.
+
+```
+// resources/js/pages/routes.ts
+export const router = {};
+```
+
+Create your first page:
+
+```vue
+// resources/js/pages/index.vue
+<template>
+  <h1>My Viper App</h1>
+  <p>The server time is {{ serverTime }}</p>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.Index>();
+
+const { data: serverTime } = page.useQuery('serverTime');
+</script>
+
+<php>
+return new class {
+  #[\Ozmos\Viper\Attrs\Prop]
+  public function serverTime(): string
+  {
+    return now()->toIso8601String();
+  }
+};
+</php>
+```
+
+Now serve your app and head to `localhost:8000`
+
+```bash
+composer dev
+# or separately run php artisan serve and vite
+```
+
+Make sure to generate the types! This has to be done after the vite server has started otherwise the `.viper/` compiled folder won't exist yet
+
+```bash
+php artisan typescript:transform
+```
+

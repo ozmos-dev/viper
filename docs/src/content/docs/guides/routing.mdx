@@ -1,0 +1,340 @@
+---
+title: Routing
+---
+import {Aside, FileTree} from "@astrojs/starlight/components";
+
+Routing is powered by Laravel and Vue Router.
+
+Vue file paths are translated to both Laravel and Vue Router formats for initial server handling and subsequent client takeover.
+
+The following file structure is a comprehensive example of the routing capabilities:
+
+<FileTree>
+  - resources
+    - js
+      - pages
+        - _layout.vue
+        - index.vue
+        - blog
+          - [...slug].vue
+        - (auth)
+          - _layout.vue
+          - login.vue
+          - register.vue
+        - (app)
+          - _layout.vue
+          - home.vue
+          - projects
+            - _layout.vue
+            - index.vue
+            - [Project]
+              - index.vue
+              - edit.vue
+</FileTree>
+
+Generates the following laravel routes:
+
+- /
+- /login
+- /register
+- /home
+- /projects
+- /projects/\{project}
+- /projects/\{project}/edit
+
+## Config
+
+Routes will be registered based on files placed in the `pages_dir` config
+
+```php
+// config/viper.php
+
+return [
+  // ..
+  'pages_dir' => resource_path('js/pages'),
+];
+```
+
+## Generated Code
+
+A `${pages_dir}/routes.ts` file is automatically generated for you which creates the types and route config necessary for vue-router to take over.
+
+Do not modify this file.
+
+## Template Navigation
+
+Navigate between pages by using vue-router
+
+```vue
+<template>
+    <router-link to="/login">Login</router-link>
+</template>
+```
+
+## Programmatic Navigation
+
+Navigate between pages by importing the routes generated in `@/pages/routes`
+
+```vue
+<script setup lang="ts">
+import { router } from '@/pages/routes';
+
+router.push('/login');
+</script>
+```
+
+## Navigating to named routes
+
+Navigate to named routes using the `route` helper provided by Viper.
+
+<Aside>
+  The route helper provided is a wrapper around `ziggy-js` but ensures all routes are relative as required by `vue-router`.
+</Aside>
+
+```vue
+<template>
+    <router-link :to="route('home')">Login</router-link>
+</template>
+
+<script setup lang="ts">
+import { route } from '@/pages/routes';
+</script>
+```
+
+## Route Params
+
+### Generic params
+
+You can capture route params by using square brackets. The param must be camel cased, or it will be converted to camel case if not already.
+
+```vue
+// posts/[id].vue
+
+<template>
+    <h1>Post {{ id }}</h1>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.PostsIdParam>();
+const { data: id } = page.useQuery('id');
+</script>
+
+<php>
+return new class {
+  #[\Ozmos\Viper\Attrs\Prop]
+  public function id(string $id): string
+  {
+    return $id;
+  }
+};
+</php>
+```
+
+### Route model binding
+
+Models are automatically injected if a matching `\App\Models\{param}` class exists.
+
+Multiword params like `[blogPost]` will be pascal cased to `BlogPost`.
+
+```vue
+// posts/[post].vue
+
+<template>
+    <h1>Post {{ post.title }}</h1>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.PostsIdParam>();
+const { data: post } = page.useQuery('post');
+</script>
+
+<php>
+return new class {
+  #[\Ozmos\Viper\Attrs\Prop]
+  public function post(\App\Models\Post $post)
+  {
+    return $post;
+  }
+};
+</php>
+```
+
+You can configure model binding in your `AppServiceProvider`
+
+```php
+// app/Providers/AppServiceProvider.php
+
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Ozmos\Viper\Facades\Viper;
+
+class AppServiceProvider extends ServiceProvider
+{
+  public function boot(): void
+  {
+    // this is the default -> enabled and looks for models in "\\App\\Models"
+    Viper::autoDiscoverModels();
+
+    // you can also configure a custom namespace to look in
+    Viper::autoDiscoverModels("\\App\\V2\\Models");
+
+    // or disable model discovery completely
+    Viper::autoDiscoverModels(false);
+  }
+}
+
+````
+
+### Wildcard Routes
+
+Wildcard routes are captured by prepending three periods before a param name such as `blog/[...slug].vue`.
+
+Routes like `blog/2025/10/01/my-post` will capture a slug value of `2025/10/01/my-post`.
+
+```vue
+// blog/[...slug].vue
+<template>
+    <p>The captured path is {{ params.slug }}</p>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const { params } = usePage();
+</script>
+```
+
+## Layouts
+
+Layouts are vue files named `_layout.vue` and act as wrappers to all sub routes.
+
+Layouts must always render a `<router-view></router-view>` otherwise you will encounter errors.
+
+Layouts are helpful for things like giving all of your logged in users a sidebar.
+
+```vue
+<template>
+  <!-- (app)/_layout.vue -->
+  <nav>...</nav>
+  <main>
+    <router-view></router-view>
+  </main>
+</template>
+```
+
+They can also be helpful in situations where you don't want to render any extra html but you just want to provide a middleware to all subroutes.
+
+
+```vue
+<template>
+  <!-- (app)/_layout.vue -->
+  <router-view></router-view>
+</template>
+
+<php>
+return new
+#[\Ozmos\Viper\Attrs\Middleware(['auth'])]
+class {};
+</php>
+```
+
+## Route Groups
+
+Route groups are directories wrapped with parenthesis e.g. `(auth)` and do not reflect in the final url.
+
+They are used to provide layouts to other routes without having to create a url like `/auth/login`.
+
+## Route Names
+
+Route names are provided via a route attribute on the class.
+
+```vue
+// home.vue
+<php>
+return new
+#[\Ozmos\Viper\Attrs\Name('home')]
+class {};
+</php>
+```
+
+Route names provided via layouts are prefixed **as-is** to subroutes.
+
+```vue
+// posts/_layout.vue
+<php>
+return new
+// notice the "."
+#[\Ozmos\Viper\Attrs\Name('posts.')]
+class {};
+</php>
+```
+
+```vue
+// posts/index.vue
+<php>
+return new
+// final name is posts.show
+#[\Ozmos\Viper\Attrs\Name('show')]
+class {};
+</php>
+```
+
+## Middleware
+
+Middleware is provided via a route attribute and applies to all subroutes, props, and actions.
+
+```vue
+// /app/_layout.vue
+<php>
+return new
+#[\Ozmos\Viper\Attrs\Middleware(['auth'])]
+class {};
+</php>
+```
+
+## Page Titles
+
+First ensure you have the head directive to your blade layout file. This directive inserts a `<title>` tag so double check that you do not already have one present.
+
+```php
+// app.blade.php
+
+<head>
+  @viperHead
+</head>
+```
+
+You can provide the page title to use via both laravel and vue.
+
+```vue
+<php>
+// set the server pages title
+return new #[\Ozmos\Viper\Attrs\Title("Home")] class {};
+</php>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+// document.title is 'Home' right now
+// we can also set the title client side afterwards if you want
+usePage().replaceTitle("XYZ");
+</script>
+```
+
+And you can configure a default title or custom format when configuring the plugin
+
+```ts
+// resources/js/app.ts
+createApp({ render: () => "..." })
+  // .use(...)
+  .use(ViperPlugin, { formatTitle: title => title || 'Laravel' })
+```
+
+

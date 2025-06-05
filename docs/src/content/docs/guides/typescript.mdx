@@ -1,0 +1,98 @@
+---
+title: TypeScript
+---
+
+Types are generated for your application by taking advantage of `spatie/laravel-data` and `spatie/typescript-transformer`.
+
+## Route Params
+
+Params are typed via the usePage composable.
+
+```vue
+// posts/[id].vue
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.Example>();
+
+// page.params.value.id <- typed as string
+</script>
+```
+
+## Props
+
+Props are typed via the usePage composable if you provide an explicit type.
+
+```vue
+// posts/[id].vue
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.Example>();
+
+// user is typed ref of App.Dto.UserDto
+const { data: user } = page.props.value.user.useQuery();
+</script>
+
+<php>
+use \App\Dto\UserDto;
+
+return new class {
+  #[\Ozmos\Viper\Attrs\Prop]
+  public function user(): UserDto
+  {
+    return UserDto::from(request()->user());
+  }
+};
+</php>
+```
+
+## Actions
+
+Requests can be typed in php and autocompleted within vue's mutate function (request) and data ref (response).
+
+Only DTO's are supported at the moment. Laravel's built in form requests cannot be typed at this time.
+
+```vue
+<template>
+  <form method="post" @submit.prevent="form.mutate()">
+    <input v-model="form.state.value.email" />
+    <p v-if="form.errors.value.email">{{ form.errors.value.email }}</p>
+    <button type="submit" :disabled="form.isPending.value">Register</button>
+  </form>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+import { router } from '@/pages/routes';
+
+const page = usePage<ViperGen.Example>();
+
+const form = page.actions.value.register.useForm({
+  email: "",
+}, {
+  onSuccess(data) {
+    // data typed to App.Dto.UserDto
+    router.push('/home');
+  }
+});
+</script>
+
+<php>
+use \App\Dto\UserDto;
+use \App\Dto\CreateUserDto;
+
+return new class {
+  #[\Ozmos\Viper\Attrs\Action]
+  public function register(CreateUserDto $data): CreateUserDto
+  {
+    // you would hopefully add password validation
+    $user = \App\Models\User::create($data);
+
+    auth()->login($user);
+
+    return UserDto::from($user);
+  }
+};
+</php>
+```

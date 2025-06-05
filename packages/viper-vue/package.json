@@ -1,0 +1,25 @@
+{
+  "name": "@ozmos/viper-vue",
+  "description": "Vue plugin for Viper",
+  "version": "0.1.1",
+  "private": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "keywords": ["laravel", "vue", "viper"],
+  "author": "ozmos",
+  "license": "MIT",
+  "repository": "github:ozmos-dev/viper",
+  "homepage": "https://viper.ozmos.dev",
+  "dependencies": {
+    "@tanstack/vue-query": "^5.77.2",
+    "vue-router": "^4.5.1",
+    "vue": "^3.5.14"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

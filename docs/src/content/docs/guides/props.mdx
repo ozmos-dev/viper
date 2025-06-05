@@ -1,0 +1,160 @@
+---
+title: Props
+---
+import {Aside} from "@astrojs/starlight/components";
+
+You can provide data to your routes by annotating functions in your php class.
+
+Data is accessed in vue through `@tanstack/vue-query` composables to take full advantage of their caching, refetching, loading states, etc. It's a great package!
+
+By default, props are always included on first page visit.
+
+```vue
+<template>
+  <p>{{ serverTime }}</p>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.Example>();
+
+const { data: serverTime } = page.useQuery('serverTime');
+</script>
+
+<php>
+return new class {
+  #[\Ozmos\Viper\Attrs\Prop]
+  public function serverTime(): string
+  {
+    return now()->toIso8601String();
+  }
+};
+</php>
+```
+
+## Why use attributes?
+
+Other frameworks like Livewire expose any public class properties as data to the frontend, why didn't we?
+
+```php
+return new class {
+  public \App\Models\User $user;
+
+  public mounted()
+  {
+    $this->user = request()->user();
+  }
+};
+```
+
+While this approach works for them, I don't see the same mental model with Viper. There should be no concept of backend state like properties in this case since all of your state is orchestrated from the frontend.
+
+There is no lifecycle to learn (like `mounted()`) with classes and attributes. Actions and props only get evaluated when they're asked for.
+
+## Refetching
+
+You can refetch props by calling `refetch()` on your query.
+
+Refetch only fetches this specific prop, not any other props loaded with the page.
+
+```vue
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.Example>();
+
+const { refetch } = page.useQuery('serverTime');
+</script>
+```
+
+## Lazy Loading
+
+If you don't want to fetch the prop on the first visit of the page you can pass `lazy: true` to the attribute.
+
+This will omit the prop until it is manually fetched with `refetch()`.
+
+```vue
+<template>
+  <p>{{ serverTime || "Not fetched yet" }}</p>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.Example>();
+
+const { data: serverTime } = page.useQuery('serverTime');
+</script>
+
+<php>
+return new class {
+  #[\Ozmos\Viper\Attrs\Prop(lazy: true)]
+  public function serverTime(): string
+  {
+    return now()->toIso8601String();
+  }
+};
+</php>
+```
+
+## Container Injection
+
+Prop functions are proxied through `app()->call(...)` and can take advantage of Laravel's service container.
+
+```vue
+<template>
+  <p>{{ name }}</p>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.Example>();
+
+const { data: name } = page.useQuery('name');
+</script>
+
+<php>
+return new class {
+  #[\Ozmos\Viper\Attrs\Prop]
+  public function name(\Illuminate\Http\Request $request): string
+  {
+    return $request->user()->name;
+  }
+};
+</php>
+```
+
+## Typing Props
+
+You can ensure your backend and frontend types stay in sync by including return types.
+
+Read the documentation on [generating types](/guides/typescript)
+
+```vue
+<template>
+  <!--  Fully typed as App.Dto.UserData -->
+  <p>{{ user.name }}</p>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.Example>();
+
+const { data: user } = page.useQuery('user');
+</script>
+
+<php>
+use \App\Dto\UserDto;
+
+return new class {
+  #[\Ozmos\Viper\Attrs\Prop]
+  public function user(): UserDto
+  {
+    return UserDto::from(request()->user());
+  }
+};
+</php>
+```
