@@ -32,7 +32,7 @@ Wondering what it looks like? Here's a preview of an automatically registered ro
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
 
-const page = usePage<ViperGet.Example>();
+const page = usePage<ViperGen.Example>();
 
 const { data: user } = page.useProp('user');
 

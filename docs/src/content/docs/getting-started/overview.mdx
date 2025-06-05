@@ -35,7 +35,7 @@ Here's an example of an end-to-end typesafe route to update a users profile:
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
 
-const page = usePage<ViperGet.Example>();
+const page = usePage<ViperGen.Example>();
 
 const { data: user } = page.useProp('user');
 
