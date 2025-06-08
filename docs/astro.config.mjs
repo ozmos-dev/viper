@@ -6,7 +6,7 @@ import { defineConfig } from "astro/config";
 export default defineConfig({
   redirects: {
     "/": {
-      destination: "/getting-started/why-viper",
+      destination: "/getting-started/overview",
       status: 301,
     },
   },

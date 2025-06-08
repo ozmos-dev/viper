@@ -33,25 +33,6 @@ return new class {
 </php>
 ```
 
-## Why use attributes?
-
-Other frameworks like Livewire expose any public class properties as data to the frontend, why didn't we?
-
-```php
-return new class {
-  public \App\Models\User $user;
-
-  public mounted()
-  {
-    $this->user = request()->user();
-  }
-};
-```
-
-While this approach works for them, I don't see the same mental model with Viper. There should be no concept of backend state like properties in this case since all of your state is orchestrated from the frontend.
-
-There is no lifecycle to learn (like `mounted()`) with classes and attributes. Actions and props only get evaluated when they're asked for.
-
 ## Refetching
 
 You can refetch props by calling `refetch()` on your query.
@@ -158,3 +139,22 @@ return new class {
 };
 </php>
 ```
+
+## Why use attributes?
+
+Other frameworks like Livewire expose any public class properties as data to the frontend, why didn't we?
+
+```php
+return new class {
+  public \App\Models\User $user;
+
+  public mounted()
+  {
+    $this->user = request()->user();
+  }
+};
+```
+
+While this approach works for them, I don't see the same mental model with Viper. There should be no concept of backend state like properties in this case since all of your state is orchestrated from the frontend.
+
+There is no lifecycle to learn (like `mounted()`) with classes and attributes. Actions and props only get evaluated when they're asked for.

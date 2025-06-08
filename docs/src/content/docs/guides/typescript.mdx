@@ -55,25 +55,24 @@ Only DTO's are supported at the moment. Laravel's built in form requests cannot 
 
 ```vue
 <template>
-  <form method="post" @submit.prevent="form.mutate()">
-    <input v-model="form.state.value.email" />
-    <p v-if="form.errors.value.email">{{ form.errors.value.email }}</p>
-    <button type="submit" :disabled="form.isPending.value">Register</button>
+  <form method="post" @submit.prevent="mutate()">
+    <input v-model="state.email" />
+    <p v-if="errors.email">{{ errors.email }}</p>
+    <button type="submit" :disabled="isPending">Register</button>
   </form>
 </template>
 
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
-import { router } from '@/pages/routes';
 
 const page = usePage<ViperGen.Example>();
 
-const form = page.actions.value.register.useForm({
-  email: "",
-}, {
+const { state, errors, isPending, mutate } = page.useForm('register', {
+  state: {
+    email: "",
+  },
   onSuccess(data) {
     // data typed to App.Dto.UserDto
-    router.push('/home');
   }
 });
 </script>
