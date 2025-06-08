@@ -5,9 +5,11 @@
 > 
 > You may (definitely) encounter issues or sharp edges.
 
-Viper combines Laravel, Vue, `@tanstack/vue-query`, and `spatie/typescript-transformer` to help you build applications rapidly.
+The full documentation is available at [https://viper.ozmos.dev](https://viper.ozmos.dev) 👈
 
-[📚 Read the docs to find out more](https://viper.ozmos.dev).
+---
+
+Viper combines Laravel, Vue, `@tanstack/vue-query`, and `spatie/typescript-transformer` to help you build applications rapidly.
 
 Get up and running with a new project in a single command:
 
