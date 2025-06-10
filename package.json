@@ -5,7 +5,8 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "docs:dev": "cd docs && bun dev",
-    "docs:build": "cd docs && bun run build"
+    "docs:build": "cd docs && bun run build",
+    "vscode:build": "cd packages/viper-vscode && bun run compile"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4"
