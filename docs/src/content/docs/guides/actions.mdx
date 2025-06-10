@@ -1,8 +1,17 @@
 ---
-title: Actions
+title: Actions / Mutations
 ---
+import {Aside} from "@astrojs/starlight/components";
 
-Actions are provided to your pages via method attributes. Call the actions from vue via wrappers around `@tanstack/vue-query` useMutation hooks.
+<Aside type="tip">
+See the [TypeScript](/guides/typescript#actions) page for information on how to generate types for your actions.
+</Aside>
+
+You can call functions in your php code just like an API endpoint through a wrapper around `@tanstack/vue-query` [useMutation](https://tanstack.com/query/latest/docs/framework/vue/guides/mutations) hook.
+
+Annotate your php method with `#[\Ozmos\Viper\Attrs\Action]` to make it available to your vue components.
+
+The `mutate` function takes in the json body of the request and can be validated like a normal Laravel request.
 
 ```vue
 <template>
@@ -41,7 +50,7 @@ return new class {
 
 ## useForm Helper
 
-A `useForm` helper is provided to make working with forms a breeze. This gives you an extra `state` ref for your form and `errors` for any 422 errors returned by laravel.
+A `useForm` helper is provided to make working with forms a breeze. This gives you an extra `state` ref for your form and `errors` ref for any 422 errors returned by laravel.
 
 ```vue
 <template>
@@ -147,7 +156,7 @@ class CreateUserDto extends Data
 </php>
 ```
 
-We require the attributes/DTO because when the request is made we submit `multipart/form-data` that has a single key called `state` with the json stringify of your state object, and then items for each file.
+We require the attributes/DTO because when the request is made we submit `multipart/form-data` that has a single key called `state` with the json stringify of your state object, and then additional keys for each file.
 
 ```
 --- boundary name="state"
@@ -157,9 +166,9 @@ We require the attributes/DTO because when the request is made we submit `multip
 ...binary data
 ```
 
-When the request comes in we can `json_decode($request->state, true)` and then validate it as if it was the root request body in the first place.
+When the request comes in behind the scenes we run `json_decode($request->state, true)` and then validate it as if it was the root request body in the first place.
 
-The benefit of doing it this way is your state can contain complex json (just like normal actions) instead of only flat string values accepted by the typical `FormData` class.
+The benefit of doing it this way is your state can contain complex json (just like normal actions) instead of only flat string values accepted by the typical `FormData` javascript class.
 
 ## Middleware
 
@@ -179,71 +188,16 @@ import { usePage } from '@ozmos/viper-vue';
 
 const page = usePage<ViperGen.Example>();
 
-const form = page.useMutation('name');
+const form = page.useMutation('someAction');
 </script>
 
 <php>
 return new class {
   #[\Ozmos\Viper\Attrs\Action]
-  public function name(\Illuminate\Http\Request $request): string
+  public function someAction(\Illuminate\Http\Request $request): string
   {
     // ... use $request
   }
 };
 </php>
 ```
-
-## TypeScript
-
-Requests can be typed in php and autocompleted within vue's mutate function (request) and data ref (response).
-
-Only DTO's are supported at the moment. Laravel's built in form requests cannot be typed at this time.
-
-```vue
-<template>
-  <form method="post" @submit.prevent="mutate()">
-    <input v-model="state.email" />
-    <p v-if="errors.email">{{ errors.email }}</p>
-    <button type="submit" :disabled="isPending">Register</button>
-  </form>
-</template>
-
-<script setup lang="ts">
-import { usePage } from '@ozmos/viper-vue';
-import { router } from '@/pages/routes';
-
-const page = usePage<ViperGen.Example>();
-
-const { state, errors, isPending, mutate } = page.useForm('register', {
-  state: {
-    email: "",
-  },
-  onSuccess(data) {
-    // data typed to App.Dto.UserDto
-    router.push('/home');
-  },
-});
-</script>
-
-<php>
-use \App\Dto\UserDto;
-use \App\Dto\CreateUserDto;
-
-return new class {
-  #[\Ozmos\Viper\Attrs\Action]
-  public function register(CreateUserDto $data): UserDto
-  {
-    // you would hopefully add password validation
-    $user = \App\Models\User::create($data);
-
-    auth()->login($user);
-
-    return UserDto::from($user);
-  }
-};
-</php>
-```
-
-See the [generating types](/guides/typescript) page for more info.
-
-

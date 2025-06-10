@@ -1,19 +1,57 @@
 ---
 title: TypeScript
 ---
+import {Aside} from "@astrojs/starlight/components";
 
-Types are generated for your application by taking advantage of `spatie/laravel-data` and `spatie/typescript-transformer`.
+Viper provides a [Collector](https://spatie.be/docs/typescript-transformer/v2/usage/selecting-classes-using-collectors) for [spatie/typescript-transformer](https://spatie.be/docs/typescript-transformer/v2/introduction) in order to generate types for your pages.
+
+This collector is automatically registered for you when you use a starter kit. The [viper installation](/getting-started/installation) guide will walk you through the process if you are doing a bare installation.
+
+## Generating Page Types
+
+Since types are generated using `spatie/typescript-transformer` you run the command provided by that package:
+
+```bash
+php artisan typescript:transform
+```
+
+<Aside>
+You must run this command manually any time you change your php types.
+</Aside>
+
+In order for viper to generate the types you must run this command ***after*** you have ran the vite dev server or build command.
+
+This is because the vite plugin places the extracted php code in `.viper/compiled` which is where our custom collector looks for files to generate types from.
+
+## Generated Type Names
+
+The generated page types are all under the `ViperGen` namespace and follow a simple naming convention:
+
+- Route groups like `(app)` are translated to `AppGroup`
+- Route params like `[id]` are translated to `IdParam`
+- All other route segments like `users` are translated to PascalCase `Users`
+- Each route segment is joined together without spaces
+
+So a file like `(app)/users/[id]/edit.vue` will generate the type `ViperGen.AppGroupUsersIdParamEdit`
+
+## Consuming Types
+
+You can pass the generated type to the `usePage` composable to get types for the params, props, and actions.
+
+```ts
+const page = usePage<ViperGen.AppGroupUsersIdParamEdit>();
+```
 
 ## Route Params
 
-Params are typed via the usePage composable.
+Route params are automatically available and typed as strings.
 
 ```vue
 // posts/[id].vue
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
 
-const page = usePage<ViperGen.Example>();
+const page = usePage<ViperGen.PostsIdParam>();
 
 // page.params.value.id <- typed as string
 </script>
@@ -21,17 +59,17 @@ const page = usePage<ViperGen.Example>();
 
 ## Props
 
-Props are typed via the usePage composable if you provide an explicit type.
+Props are typed by providing a return type on the php method.
 
 ```vue
-// posts/[id].vue
+// profile.vue
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
 
-const page = usePage<ViperGen.Example>();
+const page = usePage<ViperGen.Profile>();
 
 // user is typed ref of App.Dto.UserDto
-const { data: user } = page.props.value.user.useQuery();
+const { data: user } = page.useQuery('user');
 </script>
 
 <php>
@@ -47,13 +85,29 @@ return new class {
 </php>
 ```
 
+If you need to return an array, you can use a docblock
+
+```php
+/** @return UserDto[] */
+#[\Ozmos\Viper\Attrs\Prop]
+public function users()
+{
+  return UserDto::collect(User::all());
+}
+```
+
 ## Actions
 
-Requests can be typed in php and autocompleted within vue's mutate function (request) and data ref (response).
+Action return types are done the same as props by providing a return type on the php method.
 
-Only DTO's are supported at the moment. Laravel's built in form requests cannot be typed at this time.
+In order to generate types for the request data you MUST inject a class that extends `Spatie\LaravelData\Data`. If you use a form request or inline validation you will not get types for the request data.
+
+See laravel-data's documentation on validating DTOs to learn more:
+
+https://spatie.be/docs/laravel-data/v4/validation/introduction
 
 ```vue
+// register.vue
 <template>
   <form method="post" @submit.prevent="mutate()">
     <input v-model="state.email" />
@@ -65,7 +119,7 @@ Only DTO's are supported at the moment. Laravel's built in form requests cannot 
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
 
-const page = usePage<ViperGen.Example>();
+const page = usePage<ViperGen.Register>();
 
 const { state, errors, isPending, mutate } = page.useForm('register', {
   state: {
@@ -83,7 +137,7 @@ use \App\Dto\CreateUserDto;
 
 return new class {
   #[\Ozmos\Viper\Attrs\Action]
-  public function register(CreateUserDto $data): CreateUserDto
+  public function register(CreateUserDto $data): UserDto
   {
     // you would hopefully add password validation
     $user = \App\Models\User::create($data);

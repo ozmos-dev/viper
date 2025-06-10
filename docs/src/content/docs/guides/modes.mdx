@@ -31,7 +31,7 @@ Now you can write your vue pages as normal:
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
 
-const page = usePage<ViperGen.HomePage>();
+const page = usePage<ViperGen.Home>();
 
 const { data: user } = page.useQuery('user');
 </script>
@@ -79,7 +79,7 @@ Now you can write your php code inside your vue files:
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
 
-const page = usePage<ViperGen.HomePage>();
+const page = usePage<ViperGen.Home>();
 
 const { data: user } = page.useQuery('user');
 </script>

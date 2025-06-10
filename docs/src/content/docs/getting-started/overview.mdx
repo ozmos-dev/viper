@@ -3,19 +3,25 @@ title: Overview
 ---
 import {Aside} from "@astrojs/starlight/components";
 
-<Aside>
-Want the TL;DR of the features?
+Viper is a filesystem router powered by Laravel and Vue.
 
-Read <a href={"/getting-started/why-viper"}>Why Viper?</a>
-</Aside>
+By [colocating your php code](/guides/modes) with your vue components viper automatically passes [***fully typed***](/guides/typescript) data and actions to your vue components to consume.
 
-Viper supercharges Laravel and Vue to build fullstack applications faster than ever by removing tons of wiring/boilerplate code you would have to write yourself anyway.
+You get the power of a Laravel backend combined with the great UX and DX of a single page vue application.
 
-Features include:
+## Powered by tech you know
 
-- 📂 Filesystem routing served by laravel
-- ⚡️ SPA navigation with vue-router
-- 🤝 Automatically pass fully typed data and actions to your vue components (powered by `@tanstack/vue-router` and  `spate/typescript-transformer`)
+Viper itself has a tiny api surface area and instead leverages existing tools you already know so we don't need to reinvent the wheel:
+
+- [Laravel](https://laravel.com)
+- [Vue](https://vuejs.org)
+- [Vue Router](https://router.vuejs.org)
+- [Vite](https://vitejs.dev)
+- [@tanstack/vue-query](https://tanstack.com/query/latest)
+- [spatie/laravel-data](https://spatie.be/docs/laravel-data/v4/introduction)
+- [spatie/typescript-transformer](https://spatie.be/docs/typescript-transformer/v2/introduction)
+
+## See it in action
 
 Here's an example of an end-to-end typesafe route to update a users profile:
 

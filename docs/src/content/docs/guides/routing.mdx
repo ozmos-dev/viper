@@ -35,6 +35,7 @@ The following file structure is a comprehensive example of the routing capabilit
 Generates the following laravel routes:
 
 - /
+- /blog/\{slug}
 - /login
 - /register
 - /home
@@ -213,11 +214,9 @@ const { params } = usePage();
 
 ## Layouts
 
-Layouts are vue files named `_layout.vue` and act as wrappers to all sub routes.
+Layouts are vue files named `_layout.vue` and can be nested in each sub directory. They must always render a `<router-view></router-view>`.
 
-Layouts must always render a `<router-view></router-view>` otherwise you will encounter errors.
-
-Layouts are helpful for things like giving all of your logged in users a sidebar.
+These can be used for both providing a visual layout and providing props, middleware, etc to all subroutes.
 
 ```vue
 <template>
@@ -227,21 +226,17 @@ Layouts are helpful for things like giving all of your logged in users a sidebar
     <router-view></router-view>
   </main>
 </template>
-```
-
-They can also be helpful in situations where you don't want to render any extra html but you just want to provide a middleware to all subroutes.
-
-
-```vue
-<template>
-  <!-- (app)/_layout.vue -->
-  <router-view></router-view>
-</template>
 
 <php>
 return new
-#[\Ozmos\Viper\Attrs\Middleware(['auth'])]
-class {};
+#[\Ozmos\Viper\Attrs\Name('app.')]
+class {
+  #[\Ozmos\Viper\Attrs\Prop]
+  public function user(): \App\Dto\UserDto
+  {
+    return UserDto::from(request()->user());
+  }
+};
 </php>
 ```
 
@@ -249,11 +244,11 @@ class {};
 
 Route groups are directories wrapped with parenthesis e.g. `(auth)` and do not reflect in the final url.
 
-They are used to provide layouts to other routes without having to create a url like `/auth/login`.
+This is useful for providing shared layouts without affecting the url. For example, you can provide a layout for your auth routes without having to create a url like `/auth/login`.
 
 ## Route Names
 
-Route names are provided via a route attribute on the class.
+Route names are provided via an attribute on the class.
 
 ```vue
 // home.vue

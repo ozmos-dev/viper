@@ -3,9 +3,13 @@ title: Props
 ---
 import {Aside} from "@astrojs/starlight/components";
 
+<Aside type="tip">
+See the [TypeScript](/guides/typescript#props) page for information on how to generate types for your props.
+</Aside>
+
 You can provide data to your routes by annotating functions in your php class.
 
-Data is accessed in vue through `@tanstack/vue-query` composables to take full advantage of their caching, refetching, loading states, etc. It's a great package!
+Data is accessed in vue through `@tanstack/vue-query` [useQuery](https://tanstack.com/query/latest/docs/framework/vue/guides/queries) composables to take full advantage of their caching, refetching, loading states, etc. It's a great package!
 
 By default, props are always included on first page visit.
 
@@ -102,39 +106,6 @@ return new class {
   public function name(\Illuminate\Http\Request $request): string
   {
     return $request->user()->name;
-  }
-};
-</php>
-```
-
-## Typing Props
-
-You can ensure your backend and frontend types stay in sync by including return types.
-
-Read the documentation on [generating types](/guides/typescript)
-
-```vue
-<template>
-  <!--  Fully typed as App.Dto.UserData -->
-  <p>{{ user.name }}</p>
-</template>
-
-<script setup lang="ts">
-import { usePage } from '@ozmos/viper-vue';
-
-const page = usePage<ViperGen.Example>();
-
-const { data: user } = page.useQuery('user');
-</script>
-
-<php>
-use \App\Dto\UserDto;
-
-return new class {
-  #[\Ozmos\Viper\Attrs\Prop]
-  public function user(): UserDto
-  {
-    return UserDto::from(request()->user());
   }
 };
 </php>
