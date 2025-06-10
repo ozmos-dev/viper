@@ -26,7 +26,6 @@ export default defineConfig({
           items: [
             { label: "Overview", link: "/getting-started/overview" },
             { label: "Installation", link: "/getting-started/installation" },
-            { label: "Why Viper?", link: "/getting-started/why-viper" },
             { label: "How It Works", link: "/getting-started/how-it-works" },
           ],
         },
