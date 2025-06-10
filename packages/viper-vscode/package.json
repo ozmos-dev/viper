@@ -2,7 +2,6 @@
   "publisher": "ozmos",
   "name": "viper-vscode",
   "displayName": "PHP in Vue",
-  "type": "module",
   "version": "0.1.0",
   "private": true,
   "description": "Get PHP syntax highlighting in Vue files for use with Viper",
@@ -15,6 +14,8 @@
   "engines": {
     "vscode": "^1.83.1"
   },
+  "main": "./out/extension.js",
+  "activationEvents": ["onLanguage:vue"],
   "contributes": {
     "grammars": [
       {
@@ -22,12 +23,29 @@
         "scopeName": "source.vue.php",
         "injectTo": ["source.vue"]
       }
-    ]
+    ],
+    "configuration": {
+      "title": "PHP in Vue",
+      "properties": {
+        "phpInVue.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable PHP IntelliSense in Vue files"
+        }
+      }
+    }
   },
   "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
     "publish": "vsce publish --no-dependencies"
   },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
   "devDependencies": {
-    "@vscode/vsce": "^3.2.2"
+    "@types/vscode": "^1.83.1",
+    "@vscode/vsce": "^3.2.2",
+    "typescript": "^5.2.2"
   }
 }
