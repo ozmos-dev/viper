@@ -38,6 +38,7 @@ export default defineConfig({
             { label: "Actions / Forms", link: "/guides/actions" },
             { label: "TypeScript", link: "/guides/typescript" },
             { label: "Code Editors", link: "/guides/editors" },
+            { label: "SFC vs Adjacent", link: "/guides/modes" },
           ],
         },
       ],

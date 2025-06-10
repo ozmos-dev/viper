@@ -15,10 +15,13 @@ Features include:
 
 - 📂 Filesystem routing served by laravel
 - ⚡️ SPA navigation with vue-router
-- 🤝 Write your props and actions inline (or alongside) your vue pages
-- 🔗 Fully typesafe queries and mutations powered by `@tanstack/vue-router` and  `spate/typescript-transformer`
+- 🤝 Automatically pass fully typed data and actions to your vue components (powered by `@tanstack/vue-router` and  `spate/typescript-transformer`)
 
 Here's an example of an end-to-end typesafe route to update a users profile:
+
+<Aside type="tip">
+You can also write your php code outside of your vue files by using [Adjacent Mode](/guides/modes).
+</Aside>
 
 ```vue
 // resources/js/pages/users/[user]/edit.vue

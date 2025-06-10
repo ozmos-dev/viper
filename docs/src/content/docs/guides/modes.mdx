@@ -1,0 +1,98 @@
+---
+title: SFC vs Adjacent
+---
+
+Viper offers two different modes for writing your code, `adjacent` and `sfc`. 
+
+They both offer all of the same features, the only difference is where you write your php code.
+
+## Adjacent Mode
+
+If you don't like writing php inside your vue files you can switch to adjacent mode by updating your `viper.php` config.
+
+```php
+// config/viper.php
+
+return [
+  'mode' => 'adjacent',
+  // ... other config options
+];
+```
+
+Now you can write your vue pages as normal:
+
+```vue
+// resources/js/pages/home.vue
+<template>
+  <!-- fully typed as user.name: string -->
+  <p>{{ user.name }}</p>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.HomePage>();
+
+const { data: user } = page.useQuery('user');
+</script>
+```
+
+And when you need php you can place an adjacent php file next to the vue file (with the same name). 
+
+```php
+// resources/js/pages/home.php
+<?php
+
+use \App\Dto\UserDto;
+
+return new class {
+  #[\Ozmos\Viper\Attrs\Prop]
+  public function user(): UserDto
+  {
+    return UserDto::from(request()->user());
+  }
+};
+```
+
+## SFC Mode
+
+If you prefer to write your php code inside your vue files you should set `mode` to `sfc` in your `viper.php` config.
+
+```php
+// config/viper.php
+
+return [
+  'mode' => 'sfc',
+  // ... other config options
+];
+```
+
+Now you can write your php code inside your vue files:
+
+```vue
+// resources/js/pages/home.vue
+<template>
+  <!-- fully typed as user.name: string -->
+  <p>{{ user.name }}</p>
+</template>
+
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.HomePage>();
+
+const { data: user } = page.useQuery('user');
+</script>
+
+<php>
+use \App\Dto\UserDto;
+
+return new class {
+  #[\Ozmos\Viper\Attrs\Prop]
+  public function user(): UserDto
+  {
+    return UserDto::from(request()->user());
+  }
+};
+</php>
+```

@@ -162,13 +162,13 @@ Automatically pass api endpoints to your pages ready to be consumed
 ```vue
 <template>
   <!-- You can also pass fully-typed (from the DTO) overrides: form.mutate({ name: "something else" }) -->
-  <form method="POST" @submit.prevent="form.mutate()">
-    <input v-model="form.state.value.name" />
-    <p v-if="form.errors.value.name">{{ form.errors.value.name }}</p>
+  <form method="POST" @submit.prevent="mutate()">
+    <input v-model="state.name" />
+    <p v-if="errors.name">{{ errors.name }}</p>
     <button type="submit">Submit</button>
   </form>
 
-  <button @click="perform.mutate()">Do something else</button>
+  <button @click="performSomeAction()">Do something else</button>
 </template>
 
 <script setup lang="ts">
@@ -178,7 +178,7 @@ import { usePage } from '@ozmos/viper-vue';
 const page = usePage<ViperGen.HomePage>();
 
 // @tanstack/vue-query to access the action with a nice form helper
-const form = page.useForm('createUser', {
+const { mutate, state, errors } = page.useForm('createUser', {
   state: {
     name: "",
   },
@@ -188,7 +188,7 @@ const form = page.useForm('createUser', {
 });
 
 // or just the useMutation without the form state/form error parsing
-const perform = page.useMutation('performSomeAction', {
+const { mutate: performSomeAction} = page.useMutation('performSomeAction', {
   onSuccess() {
     // ...
   }
