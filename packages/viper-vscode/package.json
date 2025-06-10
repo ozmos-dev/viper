@@ -1,0 +1,33 @@
+{
+  "publisher": "ozmos",
+  "name": "viper-vscode",
+  "displayName": "PHP in Vue",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Get PHP syntax highlighting in Vue files for use with Viper",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ozmos-dev/viper"
+  },
+  "categories": ["Programming Languages"],
+  "engines": {
+    "vscode": "^1.83.1"
+  },
+  "contributes": {
+    "grammars": [
+      {
+        "path": "./syntaxes/vue.php.tmLanguage.json",
+        "scopeName": "source.vue.php",
+        "injectTo": ["source.vue"]
+      }
+    ]
+  },
+  "scripts": {
+    "publish": "vsce publish --no-dependencies"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.2.2"
+  }
+}

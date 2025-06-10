@@ -1,12 +1,14 @@
 ---
 title: Overview
 ---
-import {Aside} from "@astrojs/starlight/components";
+
+import { Aside } from "@astrojs/starlight/components";
 
 <Aside>
 Want the TL;DR of the features?
 
 Read <a href={"/getting-started/why-viper"}>Why Viper?</a>
+
 </Aside>
 
 Viper supercharges Laravel and Vue to build fullstack applications faster than ever by removing tons of wiring/boilerplate code you would have to write yourself anyway.
@@ -16,7 +18,7 @@ Features include:
 - 📂 Filesystem routing served by laravel
 - ⚡️ SPA navigation with vue-router
 - 🤝 Write your props and actions inline (or alongside) your vue pages
-- 🔗 Fully typesafe queries and mutations powered by `@tanstack/vue-router` and  `spate/typescript-transformer`
+- 🔗 Fully typesafe queries and mutations powered by `@tanstack/vue-router` and `spate/typescript-transformer`
 
 Here's an example of an end-to-end typesafe route to update a users profile:
 
@@ -33,19 +35,19 @@ Here's an example of an end-to-end typesafe route to update a users profile:
 </template>
 
 <script setup lang="ts">
-import { usePage } from '@ozmos/viper-vue';
+import { usePage } from "@ozmos/viper-vue";
 
-const page = usePage<ViperGen.Example>();
+const page = usePage<ViperGen.UsersUserParamEdit>();
 
-const { data: user } = page.useProp('user');
+const { data: user } = page.useProp("user");
 
-const { mutate, state, isPending } = page.useForm('updateProfile', {
+const { mutate, state, isPending } = page.useForm("updateProfile", {
   state: {
     name: user.value.name,
   },
   onSuccess(data) {
     alert(`Updated name to ${data.name}`);
-  }
+  },
 });
 </script>
 
