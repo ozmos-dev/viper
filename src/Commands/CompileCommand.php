@@ -15,9 +15,9 @@ use PhpParser\PrettyPrinter\Standard;
 
 class CompileCommand extends Command
 {
-    protected $signature = 'viper:compile {--filename=} {--write=true} {--transform=true} {--output';
+    protected $signature = 'viper:compile {--filename=} {--write=true} {--transform=true}';
 
-    protected $description = 'Compiles the php contents of a vue file';
+    protected $description = 'Compiles the php contents of a viper file';
 
     public function handle()
     {
@@ -26,7 +26,9 @@ class CompileCommand extends Command
         // take absolute path read vue file extract php write compiled output
         $phpContent = $this->getContent()->prepend('<?php'.PHP_EOL.PHP_EOL.'namespace ViperGen;'.PHP_EOL.PHP_EOL);
 
-        $relativePath = str($this->option('filename'))->replaceStart(config('viper.pages_path'), '')->replaceStart('/', '')->replaceEnd('.vue', '')->replaceEnd('.php', '');
+        $extension = pathinfo($this->option('filename'), PATHINFO_EXTENSION);
+
+        $relativePath = str($this->option('filename'))->replaceStart(config('viper.pages_path'), '')->replaceStart('/', '')->replaceEnd('.'.$extension, '');
 
         $compiledPath = config('viper.output_path').'/compiled/'.$relativePath.'.php';
 
@@ -97,10 +99,18 @@ class CompileCommand extends Command
         if (config('viper.mode') === 'sfc') {
             $componentFile = File::get($this->option('filename'));
 
+            if (config('viper.framework') === 'react') {
+                $pattern = '/export\s+const\s+php\s*=\s*\/\*\*\s*@php\s*\*\/\s*`\s*(.*?)\s*`;/s';
+
+                return str($componentFile)->match($pattern);
+            }
+
             return str($componentFile)->match('/<php>([\s\S]*?)<\/php>/s');
         }
 
-        $filename = str($this->option('filename'))->replaceEnd('.vue', '.php');
+        $extension = pathinfo($this->option('filename'), PATHINFO_EXTENSION);
+
+        $filename = str($this->option('filename'))->replaceEnd('.'.$extension, '.php');
         if (! File::exists($filename)) {
             return str('');
         }

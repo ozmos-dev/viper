@@ -8,7 +8,7 @@ export default async function viperPlugin(options = {}) {
   const viper = await Viper.make();
 
   function isPage(id) {
-    const filter = createFilter("**/*.vue");
+    const filter = createFilter(viper.pageGlob());
 
     return filter(id) && id.startsWith(viper.absolutePagesDirectory());
   }

@@ -2,6 +2,9 @@
 
 // config for Ozmos/Viper
 return [
+    // vue | react
+    'framework' => 'vue',
+
     'output_path' => base_path('.viper'),
 
     'pages_path' => resource_path('js/pages'),

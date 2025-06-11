@@ -31,13 +31,22 @@ class PageComponent
         return str($this->absolutePath)->replaceFirst($this->basePath, '')->replaceStart('/', '')->toString();
     }
 
+    public function componentExtension()
+    {
+        if (config('viper.framework') === 'react') {
+            return 'tsx';
+        }
+
+        return 'vue';
+    }
+
     private function getLayouts(): array
     {
         if ($this->isLayout()) {
             return [];
         }
 
-        $parts = str($this->relativePath())->replaceEnd('.vue', '')->explode('/');
+        $parts = str($this->relativePathWithoutExtension())->explode('/');
         $layouts = [];
 
         $currentPath = '';
@@ -48,7 +57,9 @@ class PageComponent
             }
             $currentPath .= $part;
 
-            $layoutPath = str($currentPath)->dirname()->append('/_layout.vue')->ltrim('.')->ltrim('/');
+            $ext = $this->componentExtension();
+
+            $layoutPath = str($currentPath)->dirname()->append('/_layout.'.$ext)->ltrim('.')->ltrim('/');
             $layoutAbsolutePath = $this->basePath.'/'.$layoutPath;
 
             if (File::exists($layoutAbsolutePath)) {
@@ -82,12 +93,39 @@ class PageComponent
         return str($relativePath)->matchAll('/\[([^\]]+)\]/')->values()->map(fn ($value) => str($value)->replace('...', '')->camel()->toString());
     }
 
+    public function relativePathWithoutExtension()
+    {
+        $ext = pathinfo($this->relativePath(), PATHINFO_EXTENSION);
+
+        return str($this->relativePath())->replaceEnd('.'.$ext, '')->toString();
+    }
+
+    public function reactRouteFormattedPath()
+    {
+        $relativePath = $this->relativePathWithoutExtension();
+
+        // turn file based route like (auth)/auth/verify-token/[token].tsx
+        // into react route like /auth/verify-token/:token
+        return str($relativePath)
+          // strip out "(auth)"
+            ->replaceMatches('/\(([^)]+)\)/', '')
+            ->replaceMatches('/\[(\.\.\.(.*?))\]/', fn ($match) => '*')
+            ->replaceMatches('/\[((.*?))\]/', fn ($match) => ':'.str($match[1])->camel()->toString())
+            ->replace('...', '')
+            ->replaceEnd('_layout', '')
+            ->replaceEnd('index', '')
+          // replace any double+ slashes resulting from stripping out previous parts
+            ->replaceMatches('/\/{2,}/', '/')
+            ->whenEmpty(fn () => str('/'))
+            ->toString();
+    }
+
     public function vueRouteFormattedPath()
     {
-        $relativePath = str($this->relativePath())->replaceEnd('.vue', '')->toString();
+        $relativePath = $this->relativePathWithoutExtension();
 
         // turn file based route like (auth)/auth/verify-token/[token].vue
-        // into laravel route like /auth/verify-token/:token
+        // into vue route like /auth/verify-token/:token
         return str($relativePath)
           // strip out "(auth)"
             ->replaceMatches('/\(([^)]+)\)/', '')
@@ -104,7 +142,7 @@ class PageComponent
 
     public function laravelFormattedRoutePath()
     {
-        $relativePath = str($this->relativePath())->replaceEnd('.vue', '')->toString();
+        $relativePath = $this->relativePathWithoutExtension();
 
         // turn file based route like (auth)/auth/verify-token/[token].vue
         // into laravel route like /auth/verify-token/{token}
@@ -125,7 +163,9 @@ class PageComponent
 
     public function compiledPath(): string
     {
-        return config('viper.output_path').'/compiled/'.str($this->relativePath())->replaceEnd('.vue', '.php');
+        $ext = $this->componentExtension();
+
+        return config('viper.output_path').'/compiled/'.str($this->relativePath())->replaceEnd('.'.$ext, '.php');
     }
 
     public function pageInstance()
@@ -251,12 +291,12 @@ class PageComponent
 
     public function isIndex(): bool
     {
-        return str($this->absolutePath)->endsWith('index.vue');
+        return str($this->relativePathWithoutExtension())->endsWith('index');
     }
 
     public function isLayout(): bool
     {
-        return str($this->absolutePath)->endsWith('_layout.vue');
+        return str($this->relativePathWithoutExtension())->endsWith('_layout');
     }
 
     public function parseName($instance)
@@ -335,12 +375,13 @@ class PageComponent
 
     public static function componentNameFromPath($relativePath)
     {
-        $parts = str($relativePath)->explode('/');
+        $ext = pathinfo($relativePath, PATHINFO_EXTENSION);
+        $parts = str($relativePath)->replaceEnd(".".$ext, "")->explode('/');
 
         $name = [];
 
         foreach ($parts as $i => $part) {
-            $part = str($part)->replace('.vue', '');
+            $part = str($part)->replace('.'.$ext, '');
 
             if ($part->startsWith('(')) {
                 $name[] = $part->match('/\(([^)]+)\)/')->replace('...', '')->pascal().'Group';

@@ -74,7 +74,8 @@ class Viper
 
     public function routes()
     {
-        $finder = Finder::create()->files()->in(config('viper.pages_path'))->name('*.vue');
+        $ext = config('viper.framework') === 'react' ? 'tsx' : 'vue';
+        $finder = Finder::create()->files()->in(config('viper.pages_path'))->name('*.'.$ext);
 
         $files = collect($finder)->sort(function ($a, $b) {
             $aScore = $this->scoreRoute($a->getRelativePathname());

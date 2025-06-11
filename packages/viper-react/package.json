@@ -1,0 +1,27 @@
+{
+  "name": "@ozmos/viper-react",
+  "description": "React plugin for Viper",
+  "version": "0.1.0",
+  "private": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "keywords": ["laravel", "react", "viper"],
+  "author": "ozmos",
+  "license": "MIT",
+  "repository": "github:ozmos-dev/viper",
+  "homepage": "https://viper.ozmos.dev",
+  "dependencies": {
+    "@tanstack/react-query": "^5.80.6",
+    "react": "^19.1.0",
+    "zustand": "^5.0.5",
+    "react-router": "^7.6.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "@types/react": "^19.1.7"
+  }
+}
