@@ -4,7 +4,7 @@ title: Overview
 import {Aside} from "@astrojs/starlight/components";
 import FrameworkTabsCode from "../../../components/framework-tabs-code.astro";
 
-Viper is a filesystem router for Laravel and your frontend framework.
+Viper is a filesystem router for Laravel and vue/react.
 
 By [colocating your php code](/guides/modes) with your react and vue components viper automatically passes [***fully typed***](/guides/typescript) data and actions for your frontend to consume.
 
@@ -37,13 +37,13 @@ You can choose to either write your php alongside your components (Adjacent Mode
   filename="users/[user]/edit" 
   vue={`
 <template>
-  <form method="post" @submit.prevent="mutate()">
-    <label>
-      Your Name
-      <input v-model="state.name" />
-    </label>
-    <button type="submit" :disabled="isPending">Update Profile</button>
-  </form>
+   <form method="post" @submit.prevent="mutate()">
+     <label>
+       Your Name
+       <input v-model="state.name" />
+     </label>
+     <button type="submit" :disabled="isPending">Update Profile</button>
+   </form>
 </template>
 
 <script setup lang="ts">
@@ -54,12 +54,12 @@ const page = usePage<ViperGen.Example>();
 const { data: user } = page.useProp('user');
 
 const { mutate, state, isPending } = page.useForm('updateProfile', {
-  state: {
+   state: {
     name: user.value.name,
-  },
-  onSuccess(data) {
+   },
+   onSuccess(data) {
     alert(\`Updated name to \${data.name}\`);
-  }
+   }
 });
 </script>
 `}
@@ -68,30 +68,30 @@ react={`
 import { usePage } from '@ozmos/viper-react';
 
 export default function Page() {
-  const page = usePage<ViperGen.Example>();
+   const page = usePage<ViperGen.Example>();
 
-  const { data: user } = page.useProp('user');
+   const { data: user } = page.useProp('user');
 
-  const { mutate, state, setState, isPending } = page.useForm('updateProfile', {
-    state: {
-      name: user.value.name,
-    },
-  });
+   const { mutate, state, setState, isPending } = page.useForm('updateProfile', {
+     state: {
+       name: user.value.name,
+     },
+   });
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    mutate();
-  }
+   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+     e.preventDefault();
+     mutate();
+   }
 
-  return (
-    <form method="post" onSubmit={handleSubmit}>
-      <label>
-        Your Name
-        <input value={state.name} onChange={(e) => setState({ ...state, name: e.target.value })} />
-      </label>
-      <button type="submit" disabled={isPending}>Update Profile</button>
-    </form>
-  );
+   return (
+     <form method="post" onSubmit={handleSubmit}>
+       <label>
+         Your Name
+         <input value={state.name} onChange={(e) => setState({ ...state, name: e.target.value })} />
+       </label>
+       <button type="submit" disabled={isPending}>Update Profile</button>
+     </form>
+   );
 }`}
 
 php={`
@@ -103,19 +103,19 @@ use App\\Dto\\UpdateUserDto;
 use App\\Models\\User;
 
 return new class {
-  #[Prop]
-  public function user(User $user): UserDto
-  {
-    return UserDto::from($user);
-  }
+   #[Prop]
+   public function user(User $user): UserDto
+   {
+     return UserDto::from($user);
+   }
 
-  #[Action]
-  public function updateProfile(User $user, UpdateUserDto $data): UserDto
-  {
-    $user->update($data->toArray());
+   #[Action]
+   public function updateProfile(User $user, UpdateUserDto $data): UserDto
+   {
+     $user->update($data->toArray());
 
-    return UserDto::from($user);
-  }
+     return UserDto::from($user);
+   }
 };
 `}
 />

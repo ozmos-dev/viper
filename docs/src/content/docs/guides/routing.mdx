@@ -3,6 +3,7 @@ title: Routing
 ---
 import {Aside, FileTree} from "@astrojs/starlight/components";
 import FrameworkTabs from '../../../components/framework-tabs.astro'
+import FrameworkTabsCode from '../../../components/framework-tabs-code.astro'
 
 Routes are registered both server side in Laravel and client side in your frameworks respective router ([react-router](https://reactrouter.com)/[vue-router](https://router.vuejs.org)). 
 
@@ -154,44 +155,58 @@ return new #[\Ozmos\Viper\Attrs\Name('login')] class {};
 
 ### Generic params
 
-You can capture route params by using square brackets. The param must be camel cased, or it will be converted to camel case if not already.
+You can capture route params by using square brackets in your file path. The param must be camel cased, or it will be converted to camel case if not already.
 
+<FrameworkTabs>
+<Fragment slot="vue">
 ```vue
 // posts/[id].vue
 
 <template>
-    <h1>Post {{ id }}</h1>
+    <h1>Post {{ params.id }}</h1>
 </template>
 
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
 
-const page = usePage<ViperGen.PostsIdParam>();
-const { data: id } = page.useQuery('id');
+const { params } = usePage<ViperGen.PostsIdParam>();
 </script>
+```
+</Fragment>
+<Fragment slot="react">
+```tsx
+// posts/[id].tsx
+import { usePage } from '@ozmos/viper-react';
 
-<php>
+export default function Post() {
+  const { params } = usePage<ViperGen.PostsIdParam>();
+
+  return <h1>Post {params.id}</h1>;
+}
+```
+</Fragment>
+</FrameworkTabs>
+
+The route params can be injected into props and actions as well (the name of the variable must exactly match the param).
+
+```php
+// posts/[id].php
 return new class {
   #[\Ozmos\Viper\Attrs\Prop]
-  public function id(string $id): string
+  public function user(string $id)
   {
-    return $id;
+    return \App\Models\User::find($id);
   }
 };
-</php>
 ```
 
 ### Route model binding
 
-Models are automatically injected if a matching `\App\Models\{param}` class exists.
-
-Multiword params like `[blogPost]` will be pascal cased to `BlogPost`.
-
-```vue
-// posts/[post].vue
-
+<FrameworkTabsCode 
+  filename="posts/[post]"
+  vue={`
 <template>
-    <h1>Post {{ post.title }}</h1>
+   <h1>Post {{ post.title }}</h1>
 </template>
 
 <script setup lang="ts">
@@ -200,17 +215,27 @@ import { usePage } from '@ozmos/viper-vue';
 const page = usePage<ViperGen.PostsIdParam>();
 const { data: post } = page.useQuery('post');
 </script>
+`}
+  react={`
+import { usePage } from '@ozmos/viper-react';
 
-<php>
+export default function Post() {
+   const page = usePage<ViperGen.PostsIdParam>();
+   const { data: post } = page.useQuery('post');
+
+   return <h1>Post {post.title}</h1>;
+}
+`}
+  php={`
 return new class {
-  #[\Ozmos\Viper\Attrs\Prop]
-  public function post(\App\Models\Post $post)
-  {
-    return $post;
-  }
+   #[\Ozmos\Viper\Attrs\Prop]
+   public function post(\App\Models\Post $post)
+   {
+     return $post;
+   }
 };
-</php>
-```
+`}
+/>
 
 You can configure model binding in your `AppServiceProvider`
 
@@ -238,15 +263,16 @@ class AppServiceProvider extends ServiceProvider
     Viper::autoDiscoverModels(false);
   }
 }
-
-````
+```
 
 ### Wildcard Routes
 
-Wildcard routes are captured by prepending three periods before a param name such as `blog/[...slug].vue`.
+Wildcard routes are captured by prepending three periods before a param name such as `blog/[...slug].vue` / `blog/[...slug].tsx`.
 
 Routes like `blog/2025/10/01/my-post` will capture a slug value of `2025/10/01/my-post`.
 
+<FrameworkTabs>
+<Fragment slot="vue">
 ```vue
 // blog/[...slug].vue
 <template>
@@ -259,13 +285,27 @@ import { usePage } from '@ozmos/viper-vue';
 const { params } = usePage();
 </script>
 ```
+</Fragment>
+<Fragment slot="react">
+```tsx
+// blog/[...slug].tsx
+import { usePage } from '@ozmos/viper-react';
+
+export default function BlogSlug() {
+  const { params } = usePage();
+
+  return <p>The captured path is {params.slug}</p>;
+}
+```
+</Fragment>
+</FrameworkTabs>
 
 ## Layouts
 
-Layouts are vue files named `_layout.vue` and can be nested in each sub directory. They must always render a `<router-view></router-view>`.
+Layouts are files named `_layout.vue` (Vue) or `_layout.tsx` (React) and can be nested in each sub directory. In Vue they must always render a `<router-view></router-view>`, whereas in React they must render an `<Outlet />` from `react-router`.
 
-These can be used for both providing a visual layout and providing props, middleware, etc to all subroutes.
-
+<FrameworkTabs>
+<Fragment slot="vue">
 ```vue
 <template>
   <!-- (app)/_layout.vue -->
@@ -274,72 +314,77 @@ These can be used for both providing a visual layout and providing props, middle
     <router-view></router-view>
   </main>
 </template>
-
-<php>
-return new
-#[\Ozmos\Viper\Attrs\Name('app.')]
-class {
-  #[\Ozmos\Viper\Attrs\Prop]
-  public function user(): \App\Dto\UserDto
-  {
-    return UserDto::from(request()->user());
-  }
-};
-</php>
 ```
+</Fragment>
+<Fragment slot="react">
+```tsx
+// (app)/_layout.tsx
+import { Outlet } from 'react-router';
+
+export default function AppLayout() {
+  return (
+    <>
+      <nav>...</nav>
+      <main>
+        <Outlet />
+      </main>
+    </>
+  );
+}
+```
+</Fragment>
+</FrameworkTabs>
+
+Any props, actions, middleware, names, etc provided via a layout are passed down to all subroutes.
 
 ## Route Groups
 
 Route groups are directories wrapped with parenthesis e.g. `(auth)` and do not reflect in the final url.
 
-This is useful for providing shared layouts without affecting the url. For example, you can provide a layout for your auth routes without having to create a url like `/auth/login`.
+This is useful for providing shared layouts without affecting the url. 
+
+For example:
+
+- `(auth)/_layout.tsx`
+- `(auth)/login.tsx`
+- `(auth)/register.tsx`
+
+The resulting urls `/login` and `/register` share a layout without prefixing their urls with `/auth/`
 
 ## Route Names
 
 Route names are provided via an attribute on the class.
 
-```vue
-// home.vue
-<php>
-return new
-#[\Ozmos\Viper\Attrs\Name('home')]
-class {};
-</php>
+```php
+return new #[\Ozmos\Viper\Attrs\Name('home')] class {};
 ```
 
 Route names provided via layouts are prefixed **as-is** to subroutes.
 
-```vue
-// posts/_layout.vue
-<php>
+```php
+// posts/_layout.php
 return new
 // notice the "."
 #[\Ozmos\Viper\Attrs\Name('posts.')]
 class {};
-</php>
 ```
 
-```vue
-// posts/index.vue
-<php>
+```php
+// posts/index.php
 return new
 // final name is posts.show
 #[\Ozmos\Viper\Attrs\Name('show')]
 class {};
-</php>
 ```
 
 ## Middleware
 
-Middleware is provided via a route attribute and applies to all subroutes, props, and actions.
+Middleware is provided via an attribute on the class and applies to all subroutes, props, and actions.
 
-```vue
-// /app/_layout.vue
-<php>
+```php
 return new
 #[\Ozmos\Viper\Attrs\Middleware(['auth'])]
 class {};
-</php>
 ```
 
 ## Page Titles
@@ -354,14 +399,16 @@ First ensure you have the head directive to your blade layout file. This directi
 </head>
 ```
 
-You can provide the page title to use via both laravel and vue.
+You can provide the page title to use via both laravel and your chosen frontend framework.
 
-```vue
-<php>
+```php
 // set the server pages title
 return new #[\Ozmos\Viper\Attrs\Title("Home")] class {};
-</php>
+```
 
+<FrameworkTabs>
+<Fragment slot="vue">
+```vue
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
 
@@ -370,14 +417,54 @@ import { usePage } from '@ozmos/viper-vue';
 usePage().replaceTitle("XYZ");
 </script>
 ```
+</Fragment>
+<Fragment slot="react">
+```tsx
+import { usePage } from '@ozmos/viper-react';
+
+export default function Page() {
+  const page = usePage();
+
+  // document.title is 'Home' right now
+  // we can also set the title client side afterwards if you want
+  page.setPageTitle('XYZ');
+
+  return null;
+}
+```
+</Fragment>
+</FrameworkTabs>
 
 And you can configure a default title or custom format when configuring the plugin
 
+<FrameworkTabs>
+<Fragment slot="vue">
 ```ts
 // resources/js/app.ts
 createApp({ render: () => "..." })
   // .use(...)
   .use(ViperPlugin, { formatTitle: title => title || 'Laravel' })
 ```
+</Fragment>
+<Fragment slot="react">
+```tsx
+// resources/js/app.tsx
+import { ViperProvider } from '@ozmos/viper-react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ViperProvider formatTitle={(title) => title || 'Laravel'}>
+        {/* ... */}
+      </ViperProvider>
+    </QueryClientProvider>
+  );
+}
+```
+</Fragment>
+</FrameworkTabs>
 
 

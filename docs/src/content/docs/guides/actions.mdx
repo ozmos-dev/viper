@@ -2,6 +2,7 @@
 title: Actions / Mutations
 ---
 import {Aside} from "@astrojs/starlight/components";
+import FrameworkTabsCode from "../../../components/framework-tabs-code.astro";
 
 <Aside type="tip">
 See the [TypeScript](/guides/typescript#actions) page for information on how to generate types for your actions.
@@ -13,12 +14,14 @@ Annotate your php method with `#[\Ozmos\Viper\Attrs\Action]` to make it availabl
 
 The `mutate` function takes in the json body of the request and can be validated like a normal Laravel request.
 
-```vue
+<FrameworkTabsCode 
+  filename="example"
+  vue={`
 <template>
-  <button @click="mutate({ first: 10, second: 20 })" :disabled="isPending">
-    Add
-  </button>
-  <p v-if="data">{{ data }}</p>
+   <button @click="mutate({ first: 10, second: 20 })" :disabled="isPending">
+     Add
+   </button>
+   <p v-if="data">{{ data }}</p>
 </template>
 
 <script setup lang="ts">
@@ -28,72 +31,123 @@ const page = usePage<ViperGen.Example>();
 
 const { mutate, data, isPending } = page.useMutation('add');
 </script>
+`}
+  react={`
+import { usePage } from '@ozmos/viper-react';
 
-<php>
-use \App\Dto\UserDto;
-use \App\Dto\CreateUserDto;
+export default function Example() {
+   const page = usePage<ViperGen.Example>();
+
+   const { mutate, data, isPending } = page.useMutation('add');
+
+   return (
+     <>
+       <button onClick={() => mutate({ first: 10, second: 20 })} disabled={isPending}>
+         Add
+       </button>
+       {data && <p>{data}</p>}
+     </>
+   );
+}
+`}
+  php={`
+use \\App\\Dto\\UserDto;
+use \\App\\Dto\\CreateUserDto;
 
 return new class {
-  #[\Ozmos\Viper\Attrs\Action]
-  public function add(): int
-  {
-    $data = request()->validate([
-      'first' => ['required', 'integer'],
-      'second' => ['required', 'integer'],
-    ]);
+   #[\\Ozmos\\Viper\\Attrs\\Action]
+   public function add(): int
+   {
+     $data = request()->validate([
+       'first' => ['required', 'integer'],
+       'second' => ['required', 'integer'],
+     ]);
 
-    return $data['first'] + $data['second'];
-  }
+     return $data['first'] + $data['second'];
+   }
 };
-</php>
-```
+`}
+/>
 
 ## useForm Helper
 
 A `useForm` helper is provided to make working with forms a breeze. This gives you an extra `state` ref for your form and `errors` ref for any 422 errors returned by laravel.
 
-```vue
+<FrameworkTabsCode 
+  filename="example"
+  vue={`
 <template>
-  <form method="post" @submit.prevent="mutate()">
-    <input v-model="state.email" />
-    <p v-if="errors.email">{{ errors.email }}</p>
-    <button type="submit" :disabled="isPending">Login</button>
-  </form>
+   <form method="post" @submit.prevent="mutate()">
+     <input v-model="state.email" />
+     <p v-if="errors.email">{{ errors.email }}</p>
+     <button type="submit" :disabled="isPending">Login</button>
+   </form>
 </template>
 
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
-import { router } from '@/pages/routes';
 
 const page = usePage<ViperGen.Example>();
 
 const { state, mutate, errors, isPending } = page.useForm('login', {
-  state: {
-    email: "",
-  },
-  onSuccess() {
-    router.push('/home');
-  },
+   state: {
+     email: "",
+   },
+   onSuccess() {
+     // ...
+   },
 });
 </script>
+`}
+  react={`
+import { usePage } from '@ozmos/viper-react';
 
-<php>
-use \App\Dto\UserDto;
+export default function FormExample() {
+   const page = usePage<ViperGen.Example>();
+
+   const { state, setState, mutate, errors, isPending } = page.useForm('login', {
+     state: {
+       email: "",
+     },
+     onSuccess() {
+       // ...
+     },
+   });
+
+   const handleSubmit = (e: React.FormEvent) => {
+     e.preventDefault();
+     mutate();
+   };
+
+   return (
+     <form method="post" onSubmit={handleSubmit}>
+       <input 
+         value={state.email} 
+         onChange={(e) => setState({...state, email: e.target.value })} 
+       />
+       {errors.email && <p>{errors.email}</p>}
+       <button type="submit" disabled={isPending}>Login</button>
+     </form>
+   );
+}
+`}
+  php={`
+use \\App\\Dto\\UserDto;
 
 return new class {
-  #[\Ozmos\Viper\Attrs\Action]
-  public function login()
-  {
-    // you would hopefully add password validation
-    $data = request()->validate([
-      'email' => ['required', 'string', 'email'],
-    ]);
+   #[\\Ozmos\\Viper\\Attrs\\Action]
+   public function login()
+   {
+     // you would hopefully add password validation
+     $data = request()->validate([
+       'email' => ['required', 'string', 'email'],
+     ]);
 
-    auth()->login(\App\Models\User::whereEmail($data['email'])->first());
-  }
+     auth()->login(\\App\\Models\\User::whereEmail($data['email'])->first());
+   }
 };
-</php>
-```
+`}
+/>
 
 ## Form Data / File Uploads
 
@@ -101,42 +155,81 @@ Files can be uploaded alongside other form state using the `useFormData` hook.
 
 This feature currently ONLY WORKS when injecting a `spatie/laravel-data` DTO into your action to be validated.
 
-```vue
+<FrameworkTabsCode 
+  filename="example"
+  vue={`
 <template>
-  <form method="post" @submit.prevent="mutate()">
-    <input v-model="state.email" />
-    <input @change="state.photo = $event.target.files[0]" />
-    <button type="submit" :disabled="isPending">Update Profile</button>
-  </form>
+   <form method="post" @submit.prevent="mutate()">
+     <input v-model="state.email" />
+     <input @change="state.photo = $event.target.files[0]" />
+     <button type="submit" :disabled="isPending">Update Profile</button>
+   </form>
 </template>
 
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
-import { router } from '@/pages/routes';
 
 const page = usePage<ViperGen.Example>();
 
 const { state, mutate, errors, isPending } = page.useFormData('submit', {
-  state: {
-    email: "",
-    photo: null,
-  },
-  files: ['photo'],
-  onSuccess() {
-    router.push('/home');
-  },
+   state: {
+     email: "",
+     photo: null,
+   },
+   files: ['photo'],
+   onSuccess() {
+     // ...
+   },
 });
 </script>
+`}
+  react={`
+import { usePage } from '@ozmos/viper-react';
 
-<php>
-use \App\Dto\CreateUserDto;
+export default function FormDataExample() {
+   const page = usePage<ViperGen.Example>();
+
+   const { state, setState, mutate, errors, isPending } = page.useFormData('submit', {
+     state: {
+       email: "",
+       photo: null,
+     },
+     files: ['photo'],
+     onSuccess() {
+       // ...
+     },
+   });
+
+   const handleSubmit = (e: React.FormEvent) => {
+     e.preventDefault();
+     mutate();
+   };
+
+   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+     setState({ ...state, photo: e.target.files?.[0] || null });
+   };
+
+   return (
+     <form method="post" onSubmit={handleSubmit}>
+       <input 
+         value={state.email} 
+         onChange={(e) => setState({ ...state, email: e.target.value })}
+       />
+       <input type="file" onChange={handleFileChange} />
+       <button type="submit" disabled={isPending}>Update Profile</button>
+     </form>
+   );
+}
+`}
+  php={`
+use \\App\\Dto\\CreateUserDto;
 
 return new class {
-  #[\Ozmos\Viper\Attrs\Action]
-  public function submit(CreateUserDto $data)
-  {
-    request()->user()->update($data);
-  }
+   #[\\Ozmos\\Viper\\Attrs\\Action]
+   public function submit(CreateUserDto $data)
+   {
+     request()->user()->update($data);
+   }
 };
 
 // create user DTO would look like
@@ -144,17 +237,17 @@ return new class {
 #[TypeScript]
 class CreateUserDto extends Data
 {
-  use \Ozmos\Viper\Traits\ValidatesFormData;
+   use \\Ozmos\\Viper\\Traits\\ValidatesFormData;
 
-  public function __construct(
-    // non-file fields MUST be annotated
-    #[\Ozmos\Viper\Attrs\FormDataValue]
-    public string $email,
-    public ?UploadedFile $photo = null
-  ) {}
+   public function __construct(
+     // non-file fields MUST be annotated
+     #[\\Ozmos\\Viper\\Attrs\\FormDataValue]
+     public string $email,
+     public ?UploadedFile $photo = null
+   ) {}
 }
-</php>
-```
+`}
+/>
 
 We require the attributes/DTO because when the request is made we submit `multipart/form-data` that has a single key called `state` with the json stringify of your state object, and then additional keys for each file.
 
@@ -178,9 +271,11 @@ Any route middleware applied to the page or previous layouts will apply to the a
 
 Action functions are proxied through `app()->call(...)` and can take advantage of Laravel's service container.
 
-```vue
+<FrameworkTabsCode 
+  filename="example"
+  vue={`
 <template>
-  <button @click="form.mutate()">Perform Action</button>
+   <button @click="form.mutate()">Perform Action</button>
 </template>
 
 <script setup lang="ts">
@@ -190,14 +285,27 @@ const page = usePage<ViperGen.Example>();
 
 const form = page.useMutation('someAction');
 </script>
+`}
+  react={`
+import { usePage } from '@ozmos/viper-react';
 
-<php>
+export default function ContainerInjectionExample() {
+   const page = usePage<ViperGen.Example>();
+
+   const form = page.useMutation('someAction');
+
+   return (
+     <button onClick={() => form.mutate()}>Perform Action</button>
+   );
+}
+`}
+  php={`
 return new class {
-  #[\Ozmos\Viper\Attrs\Action]
-  public function someAction(\Illuminate\Http\Request $request): string
-  {
-    // ... use $request
-  }
+   #[\\Ozmos\\Viper\\Attrs\\Action]
+   public function someAction(\\Illuminate\\Http\\Request $request): string
+   {
+     // ... use $request
+   }
 };
-</php>
-```
+`}
+/>

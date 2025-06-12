@@ -2,6 +2,7 @@
 title: Props
 ---
 import {Aside} from "@astrojs/starlight/components";
+import FrameworkTabsCode from "../../../components/framework-tabs-code.astro";
 
 <Aside type="tip">
 See the [TypeScript](/guides/typescript#props) page for information on how to generate types for your props.
@@ -9,13 +10,16 @@ See the [TypeScript](/guides/typescript#props) page for information on how to ge
 
 You can provide data to your routes by annotating functions in your php class.
 
-Data is accessed in vue through `@tanstack/vue-query` [useQuery](https://tanstack.com/query/latest/docs/framework/vue/guides/queries) composables to take full advantage of their caching, refetching, loading states, etc.
+Data is accessed in vue through `@tanstack/{vue/react}-query` [useQuery](https://tanstack.com/query/latest/docs/framework/vue/guides/queries) composables to take full advantage of their caching, refetching, loading states, etc.
 
 By default, props are always included on first page visit.
 
-```vue
+
+<FrameworkTabsCode 
+  filename="example"
+  vue={`
 <template>
-  <p>{{ serverTime }}</p>
+   <p>{{ serverTime }}</p>
 </template>
 
 <script setup lang="ts">
@@ -24,18 +28,29 @@ import { usePage } from '@ozmos/viper-vue';
 const page = usePage<ViperGen.Example>();
 
 const { data: serverTime } = page.useQuery('serverTime');
-</script>
+</script>  
+`}
+  react={`
+import { usePage } from '@ozmos/viper-vue';
 
-<php>
+export default function Example() {
+   const page = usePage<ViperGen.Example>();
+
+   const { data: serverTime } = page.useQuery('serverTime');
+
+   return <p>{serverTime}</p>
+}
+`}
+  php={`
 return new class {
-  #[\Ozmos\Viper\Attrs\Prop]
-  public function serverTime(): string
-  {
-    return now()->toIso8601String();
-  }
+   #[\\Ozmos\\Viper\\Attrs\\Prop]
+   public function serverTime(): string
+   {
+     return now()->toIso8601String();
+   }
 };
-</php>
-```
+`}
+/>
 
 ## Refetching
 
@@ -43,7 +58,9 @@ You can refetch props by calling `refetch()` on your query.
 
 Refetch only fetches this specific prop, not any other props loaded with the page.
 
-```vue
+<FrameworkTabsCode 
+  filename="example"
+  vue={`
 <script setup lang="ts">
 import { usePage } from '@ozmos/viper-vue';
 
@@ -51,7 +68,29 @@ const page = usePage<ViperGen.Example>();
 
 const { refetch } = page.useQuery('serverTime');
 </script>
-```
+`}
+  react={`
+import { usePage } from '@ozmos/viper-react';
+
+export default function Example() {
+   const page = usePage<ViperGen.Example>();
+
+   const { refetch } = page.useQuery('serverTime');
+
+   // Use refetch() when needed
+   return null;
+}
+`}
+  php={`
+return new class {
+   #[\\Ozmos\\Viper\\Attrs\\Prop]
+   public function serverTime(): string
+   {
+     return now()->toIso8601String();
+   }
+};
+`}
+/>
 
 ## Lazy Loading
 
@@ -59,9 +98,11 @@ If you don't want to fetch the prop on the first visit of the page you can pass 
 
 This will omit the prop until it is manually fetched with `refetch()`.
 
-```vue
+<FrameworkTabsCode 
+  filename="example"
+  vue={`
 <template>
-  <p>{{ serverTime || "Not fetched yet" }}</p>
+   <p>{{ serverTime || "Not fetched yet" }}</p>
 </template>
 
 <script setup lang="ts">
@@ -71,25 +112,38 @@ const page = usePage<ViperGen.Example>();
 
 const { data: serverTime } = page.useQuery('serverTime');
 </script>
+`}
+  react={`
+import { usePage } from '@ozmos/viper-react';
 
-<php>
+export default function Example() {
+   const page = usePage<ViperGen.Example>();
+
+   const { data: serverTime } = page.useQuery('serverTime');
+
+   return <p>{serverTime || "Not fetched yet"}</p>;
+}
+`}
+  php={`
 return new class {
-  #[\Ozmos\Viper\Attrs\Prop(lazy: true)]
-  public function serverTime(): string
-  {
-    return now()->toIso8601String();
-  }
+   #[\\Ozmos\\Viper\\Attrs\\Prop(lazy: true)]
+   public function serverTime(): string
+   {
+     return now()->toIso8601String();
+   }
 };
-</php>
-```
+`}
+/>
 
 ## Container Injection
 
 Prop functions are proxied through `app()->call(...)` and can take advantage of Laravel's service container.
 
-```vue
+<FrameworkTabsCode 
+  filename="example"
+  vue={`
 <template>
-  <p>{{ name }}</p>
+   <p>{{ name }}</p>
 </template>
 
 <script setup lang="ts">
@@ -99,17 +153,28 @@ const page = usePage<ViperGen.Example>();
 
 const { data: name } = page.useQuery('name');
 </script>
+`}
+  react={`
+import { usePage } from '@ozmos/viper-react';
 
-<php>
+export default function Example() {
+   const page = usePage<ViperGen.Example>();
+
+   const { data: name } = page.useQuery('name');
+
+   return <p>{name}</p>;
+}
+`}
+  php={`
 return new class {
-  #[\Ozmos\Viper\Attrs\Prop]
-  public function name(\Illuminate\Http\Request $request): string
-  {
-    return $request->user()->name;
-  }
+   #[\\Ozmos\\Viper\\Attrs\\Prop]
+   public function name(\\Illuminate\\Http\\Request $request): string
+   {
+     return $request->user()->name;
+   }
 };
-</php>
-```
+`}
+/>
 
 ## Why use attributes?
 

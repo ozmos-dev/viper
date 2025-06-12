@@ -3,6 +3,7 @@ title: Installation
 ---
 import {Aside} from "@astrojs/starlight/components";
 import FrameworkTabs from '../../../components/framework-tabs.astro'
+import FrameworkTabsCode from '../../../components/framework-tabs-code.astro'
 
 <Aside type={'caution'}>
   Viper is still in active development and you may encounter strange behaviour or breaking changes until it hits 1.0 release
@@ -273,10 +274,10 @@ export const router = {};
 
 Create your first page:
 
-```vue
-// resources/js/pages/index.vue
+<FrameworkTabsCode
+  filename="resources/js/pages/index"
+  vue={`
 <template>
-  <h1>My Viper App</h1>
   <p>The server time is {{ serverTime }}</p>
 </template>
 
@@ -287,17 +288,29 @@ const page = usePage<ViperGen.Index>();
 
 const { data: serverTime } = page.useQuery('serverTime');
 </script>
+  `}
+  react={`
+import { usePage } from '@ozmos/viper-react';
 
-<php>
+export default function Index() {
+   const page = usePage<ViperGen.Index>();
+
+   const { data: serverTime } = page.useQuery('serverTime');
+
+   return <p>The server time is {serverTime}</p>
+}  
+`}
+  php={`
 return new class {
-  #[\Ozmos\Viper\Attrs\Prop]
-  public function serverTime(): string
-  {
+   #[\\Ozmos\\Viper\\Attrs\\Prop]
+   public function serverTime(): string
+   {
     return now()->toIso8601String();
-  }
-};
-</php>
-```
+   }
+};`}
+/>
+
+
 
 Now serve your app and head to `localhost:8000`
 
