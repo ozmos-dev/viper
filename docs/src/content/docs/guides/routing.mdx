@@ -2,13 +2,18 @@
 title: Routing
 ---
 import {Aside, FileTree} from "@astrojs/starlight/components";
+import FrameworkTabs from '../../../components/framework-tabs.astro'
 
-Routing is powered by Laravel and Vue Router.
+Routes are registered both server side in Laravel and client side in your frameworks respective router ([react-router](https://reactrouter.com)/[vue-router](https://router.vuejs.org)). 
 
-Vue file paths are translated to both Laravel and Vue Router formats for initial server handling and subsequent client takeover.
+You can follow their respective documentations for more specific details on navigating your app. This page covers the Viper specific things you should know.
+
+## Filesystem Routing
 
 The following file structure is a comprehensive example of the routing capabilities:
 
+<FrameworkTabs>
+<Fragment slot="vue">
 <FileTree>
   - resources
     - js
@@ -31,8 +36,34 @@ The following file structure is a comprehensive example of the routing capabilit
               - index.vue
               - edit.vue
 </FileTree>
+</Fragment>
+<Fragment slot="react">
+<FileTree>
+  - resources
+    - js
+      - pages
+        - _layout.tsx
+        - index.tsx
+        - blog
+          - [...slug].tsx
+        - (auth)
+          - _layout.tsx
+          - login.tsx
+          - register.tsx
+        - (app)
+          - _layout.tsx
+          - home.tsx
+          - projects
+            - _layout.tsx
+            - index.tsx
+            - [Project]
+              - index.tsx
+              - edit.tsx
+</FileTree>
+</Fragment>
+</FrameworkTabs>
 
-Generates the following laravel routes:
+Generates the following routes:
 
 - /
 - /blog/\{slug}
@@ -43,55 +74,51 @@ Generates the following laravel routes:
 - /projects/\{project}
 - /projects/\{project}/edit
 
+Note that in React all pages must be exported as `default`.
+
 ## Config
 
-Routes will be registered based on files placed in the `pages_dir` config
+Routes will be registered based on files placed in the `pages_path` config
 
 ```php
 // config/viper.php
 
 return [
   // ..
-  'pages_dir' => resource_path('js/pages'),
+  'pages_path' => resource_path('js/pages'),
 ];
 ```
 
 ## Generated Code
 
-A `${pages_dir}/routes.ts` file is automatically generated for you which creates the types and route config necessary for vue-router to take over.
+A `${pages_path}/routes.ts` file is automatically generated for you which creates the types and route config necessary for the client side router to take over.
 
 Do not modify this file.
 
-## Template Navigation
+## Navigating
 
-Navigate between pages by using vue-router
+See the framework specific documentation for navigating between pages
 
-```vue
-<template>
-    <router-link to="/login">Login</router-link>
-</template>
-```
+<FrameworkTabs>
+<Fragment slot="vue">
+https://router.vuejs.org/guide/essentials/navigation.html
+</Fragment>
+<Fragment slot="react">
+https://reactrouter.com/start/framework/navigating
+</Fragment>
+</FrameworkTabs>
 
-## Programmatic Navigation
-
-Navigate between pages by importing the routes generated in `@/pages/routes`
-
-```vue
-<script setup lang="ts">
-import { router } from '@/pages/routes';
-
-router.push('/login');
-</script>
-```
 
 ## Navigating to named routes
 
 Navigate to named routes using the `route` helper provided by Viper.
 
 <Aside>
-  The route helper provided is a wrapper around `ziggy-js` but ensures all routes are relative as required by `vue-router`.
+  The route helper provided is a wrapper around `ziggy-js` but ensures all routes are relative by default.
 </Aside>
 
+<FrameworkTabs>
+<Fragment slot="vue">
 ```vue
 <template>
     <router-link :to="route('home')">Login</router-link>
@@ -100,6 +127,27 @@ Navigate to named routes using the `route` helper provided by Viper.
 <script setup lang="ts">
 import { route } from '@/pages/routes';
 </script>
+```
+</Fragment>
+<Fragment slot="react">
+```tsx
+import { useNavigate } from "react-router";
+import { route } from '@/pages/routes';
+
+export default function Home() {
+  const navigate = useNavigate();
+
+  return <Link to={route('login')}>Login</Link>
+}
+```
+</Fragment>
+</FrameworkTabs>
+
+To give a page a name, use the `Name` attribute on your class:
+
+```php
+// resources/js/pages/login.php
+return new #[\Ozmos\Viper\Attrs\Name('login')] class {};
 ```
 
 ## Route Params

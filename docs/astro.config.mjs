@@ -27,6 +27,7 @@ export default defineConfig({
             { label: "Overview", link: "/getting-started/overview" },
             { label: "Installation", link: "/getting-started/installation" },
             { label: "How It Works", link: "/getting-started/how-it-works" },
+            { label: "SFC vs Adjacent", link: "/guides/modes" },
           ],
         },
         {
@@ -37,7 +38,6 @@ export default defineConfig({
             { label: "Actions / Forms", link: "/guides/actions" },
             { label: "TypeScript", link: "/guides/typescript" },
             { label: "Code Editors", link: "/guides/editors" },
-            { label: "SFC vs Adjacent", link: "/guides/modes" },
           ],
         },
       ],

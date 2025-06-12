@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { createContext, useEffect, useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { redirect } from "react-router";
 import { create } from "zustand";
 
@@ -149,18 +149,14 @@ export function usePage<P extends BasePageType>() {
       };
     },
 
-    useMutation(
-      key: keyof Actions,
+    useMutation<K extends keyof Actions>(
+      key: K,
       options: Parameters<
-        typeof useMutation<
-          Actions[typeof key]["result"],
-          unknown,
-          Actions[typeof key]["args"]
-        >
+        typeof useMutation<Actions[K]["result"], unknown, Actions[K]["args"]>
       >[0] = {}
     ) {
-      type Result = Actions[typeof key]["result"];
-      type Args = Actions[typeof key]["args"];
+      type Result = Actions[K]["result"];
+      type Args = Actions[K]["args"];
 
       return useMutation<Result, unknown, Args>({
         ...options,
@@ -192,20 +188,16 @@ export function usePage<P extends BasePageType>() {
       });
     },
 
-    useForm(
-      key: keyof Actions,
+    useForm<K extends keyof Actions>(
+      key: K,
       options: Parameters<
-        typeof useMutation<
-          Actions[typeof key]["result"],
-          unknown,
-          Actions[typeof key]["args"]
-        >
+        typeof useMutation<Actions[K]["result"], unknown, Actions[K]["args"]>
       >[0] & {
-        state: Actions[typeof key]["args"];
+        state: Actions[K]["args"];
       }
     ) {
-      type Result = Actions[typeof key]["result"];
-      type Args = Actions[typeof key]["args"];
+      type Result = Actions[K]["result"];
+      type Args = Actions[K]["args"];
 
       // @ts-expect-error
       const _initialState = { ...options.state } as Args;
@@ -272,22 +264,18 @@ export function usePage<P extends BasePageType>() {
         setState,
       };
     },
-    useFormData(
-      key: keyof Actions,
+    useFormData<K extends keyof Actions>(
+      key: K,
       options: Parameters<
-        typeof useMutation<
-          Actions[typeof key]["result"],
-          unknown,
-          Actions[typeof key]["args"]
-        >
+        typeof useMutation<Actions[K]["result"], unknown, Actions[K]["args"]>
       >[0] & {
-        state: Actions[typeof key]["args"];
+        state: Actions[K]["args"];
         // todo: how can we auto detect this?
         files: string[];
       }
     ) {
-      type Result = Actions[typeof key]["result"];
-      type Args = Actions[typeof key]["args"];
+      type Result = Actions[K]["result"];
+      type Args = Actions[K]["args"];
 
       // @ts-expect-error
       const _initialState = { ...options.state };
