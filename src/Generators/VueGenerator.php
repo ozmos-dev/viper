@@ -30,7 +30,7 @@ class VueGenerator implements RouteGenerator
 
         $prevRoutes = file_get_contents(config('viper.pages_path').'/routes.ts');
 
-        $str = view('viper::routes', ['vue-routes' => $routes, 'pages' => $pages])->render();
+        $str = view('viper::vue-routes', ['routes' => $routes, 'pages' => $pages])->render();
 
         if ($prevRoutes !== $str) {
             file_put_contents(
@@ -51,22 +51,6 @@ class VueGenerator implements RouteGenerator
 
     private function addChildToLayout(PageComponent $page)
     {
-        // $this->routes is a php array that looks like a vue router routes file
-        // we will build a vue router route config from this routes array
-        // this function should loop through all $page->layouts and try to find or create an appropriately nested layout in $this->routes
-        // it should then add the page to that layouts children
-        // if there are no layouts for the page, just add it to the top level routes
-        // the vue router objects have this shape
-        // const routes = [
-        //   {
-        //     path: '/admin',
-        //     children: [
-        //       { path: '', component: AdminOverview },
-        //       { path: 'users', component: AdminUserList },
-        //       { path: 'users/:id', component: AdminUserDetails },
-        //     ],
-        //   },
-        // ]
         $componentName = $page->componentName();
         $fullPath = str($page->vueRouteFormattedPath())->trim('/')->toString();
 

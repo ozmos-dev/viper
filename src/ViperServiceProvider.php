@@ -7,9 +7,9 @@ use Ozmos\Viper\Commands\CompileCommand;
 use Ozmos\Viper\Commands\ConfigCommand;
 use Ozmos\Viper\Commands\GenerateCommand;
 use Ozmos\Viper\Commands\InvertCommand;
+use Ozmos\Viper\Generators\ReactGenerator;
 use Ozmos\Viper\Generators\RouteGenerator;
 use Ozmos\Viper\Generators\VueGenerator;
-use Ozmos\Viper\Generators\ReactGenerator;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -40,8 +40,8 @@ class ViperServiceProvider extends PackageServiceProvider
 
         $this->app->singleton(RouteGenerator::class, function () {
             return match (config('viper.framework')) {
-                'react' => new ReactGenerator(),
-                default => new VueGenerator(),
+                'react' => new ReactGenerator,
+                default => new VueGenerator,
             };
         });
     }

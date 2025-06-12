@@ -46,24 +46,13 @@ class ReactGenerator implements RouteGenerator
 
     private function addChildToLayout(PageComponent $page)
     {
-        // const routes = [
-        //   {
-        //     path: '/admin',
-        //     component: AdminLayout,
-        //     children: [
-        //       { path: '/', component: AdminOverview },
-        //       { path: 'users', component: AdminUserList },
-        //       { path: 'users/:id', component: AdminUserDetails },
-        //     ],
-        //   },
-        // ]
         $componentName = $page->componentName();
         $fullPath = str($page->reactRouteFormattedPath())->trim('/')->toString();
 
         // If the page has no layouts, add it to the top-level routes
         if (empty($page->layouts)) {
             $routeObject = [
-                'path' => $fullPath === "" ? "/" : $fullPath,
+                'path' => $fullPath === '' ? '/' : $fullPath,
                 'component' => $componentName,
                 'relativePath' => $page->relativePathWithoutExtension(),
             ];
@@ -136,7 +125,7 @@ class ReactGenerator implements RouteGenerator
 
         // Add the page to the children of the last layout with relative path
         $routeObject = [
-            'path' => $relativePath === "" ? "/" : $relativePath,
+            'path' => $relativePath === '' ? '/' : $relativePath,
             'component' => $componentName,
             'relativePath' => $page->relativePathWithoutExtension(),
         ];

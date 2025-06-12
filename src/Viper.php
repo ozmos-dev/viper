@@ -93,19 +93,19 @@ class Viper
         }
     }
 
-  function scoreRoute(string $path): int
-  {
-    return str($path)->trim('/')->replaceEnd('.vue', '')->explode('/')
-      ->reduce(function ($score, $segment) {
-        if (str($segment)->startsWith('[') && str($segment)->endsWith(']')) {
-          return $score + 10;
-        }
+    public function scoreRoute(string $path): int
+    {
+        return str($path)->trim('/')->replaceEnd('.vue', '')->explode('/')
+            ->reduce(function ($score, $segment) {
+                if (str($segment)->startsWith('[') && str($segment)->endsWith(']')) {
+                    return $score + 10;
+                }
 
-        if (str($segment)->contains('...')) {
-          return $score + 100;
-        }
+                if (str($segment)->contains('...')) {
+                    return $score + 100;
+                }
 
-        return $score;
-      }, 0);
-  }
+                return $score;
+            }, 0);
+    }
 }

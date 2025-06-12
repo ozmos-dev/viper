@@ -376,7 +376,7 @@ class PageComponent
     public static function componentNameFromPath($relativePath)
     {
         $ext = pathinfo($relativePath, PATHINFO_EXTENSION);
-        $parts = str($relativePath)->replaceEnd(".".$ext, "")->explode('/');
+        $parts = str($relativePath)->replaceEnd('.'.$ext, '')->explode('/');
 
         $name = [];
 
