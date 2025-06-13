@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Ozmos\Viper\Facades\Viper;
 
 $world = null;

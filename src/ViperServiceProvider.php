@@ -7,9 +7,16 @@ use Ozmos\Viper\Commands\CompileCommand;
 use Ozmos\Viper\Commands\ConfigCommand;
 use Ozmos\Viper\Commands\GenerateCommand;
 use Ozmos\Viper\Commands\InvertCommand;
+use Ozmos\Viper\Extractors\AdjacentExtractor;
+use Ozmos\Viper\Extractors\PhpExtractor;
+use Ozmos\Viper\Extractors\ReactSfcExtractor;
+use Ozmos\Viper\Extractors\VueSfcExtractor;
 use Ozmos\Viper\Generators\ReactGenerator;
 use Ozmos\Viper\Generators\RouteGenerator;
 use Ozmos\Viper\Generators\VueGenerator;
+use Ozmos\Viper\Inverters\ModeInverter;
+use Ozmos\Viper\Inverters\ReactInverter;
+use Ozmos\Viper\Inverters\VueInverter;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -38,7 +45,7 @@ class ViperServiceProvider extends PackageServiceProvider
             ";
         });
 
-        $this->app->singleton(RouteGenerator::class, function () {
+        $this->app->bind(RouteGenerator::class, function () {
             return match (config('viper.framework')) {
                 'react' => new ReactGenerator,
                 default => new VueGenerator,
@@ -47,6 +54,26 @@ class ViperServiceProvider extends PackageServiceProvider
 
         $this->app->singleton(ViperConfig::class, function () {
             return new ViperConfig(...config('viper'));
+        });
+
+        $this->app->bind(PhpExtractor::class, function () {
+            if (config('viper.mode') === 'adjacent') {
+                return new AdjacentExtractor;
+            }
+
+            if (config('viper.framework') === 'react') {
+                return new ReactSfcExtractor;
+            }
+
+            return new VueSfcExtractor;
+        });
+
+        $this->app->bind(ModeInverter::class, function () {
+            if (config('viper.framework') === 'react') {
+                return new ReactInverter;
+            }
+
+            return new VueInverter;
         });
     }
 }

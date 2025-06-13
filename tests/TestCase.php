@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\File;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Ozmos\Viper\Compiler;
-use Ozmos\Viper\ViperConfig;
 use Ozmos\Viper\ViperServiceProvider;
 use Symfony\Component\Finder\Finder;
 

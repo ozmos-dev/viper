@@ -2,8 +2,8 @@
 
 namespace Ozmos\Viper\Tests;
 
-use Ozmos\Viper\ViperConfig;
 use Illuminate\Support\Facades\File;
+use Ozmos\Viper\ViperConfig;
 
 class World
 {

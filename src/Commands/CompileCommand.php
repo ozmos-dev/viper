@@ -20,10 +20,10 @@ class CompileCommand extends Command
             write: $this->option('write') === 'true',
         );
 
-        $output = $compiler->compile();
-
         $extension = pathinfo($this->option('filename'), PATHINFO_EXTENSION);
         $relativePath = str($this->option('filename'))->replaceStart(app(ViperConfig::class)->pagesPath(), '')->replaceStart('/', '')->replaceEnd('.'.$extension, '');
+
+        $output = $compiler->compile();
 
         if ($this->option('write') === 'true') {
             echo 'Compiled '.$relativePath;
