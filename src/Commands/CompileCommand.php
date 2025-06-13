@@ -4,14 +4,8 @@ namespace Ozmos\Viper\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\File;
-use Ozmos\Viper\PageComponent;
-use PhpParser\Node;
-use PhpParser\NodeTraverser;
-use PhpParser\NodeVisitorAbstract;
-use PhpParser\ParserFactory;
-use PhpParser\PhpVersion;
-use PhpParser\PrettyPrinter\Standard;
+use Ozmos\Viper\Compiler;
+use Ozmos\Viper\ViperConfig;
 
 class CompileCommand extends Command
 {
@@ -21,101 +15,25 @@ class CompileCommand extends Command
 
     public function handle()
     {
-        $parser = (new ParserFactory)->createForVersion(PhpVersion::getHostVersion());
+        $compiler = new Compiler(
+            filename: $this->option('filename'),
+            write: $this->option('write') === 'true',
+        );
 
-        // take absolute path read vue file extract php write compiled output
-        $phpContent = $this->getContent()->prepend('<?php'.PHP_EOL.PHP_EOL.'namespace ViperGen;'.PHP_EOL.PHP_EOL);
+        $output = $compiler->compile();
 
         $extension = pathinfo($this->option('filename'), PATHINFO_EXTENSION);
-
-        $relativePath = str($this->option('filename'))->replaceStart(config('viper.pages_path'), '')->replaceStart('/', '')->replaceEnd('.'.$extension, '');
-
-        $compiledPath = config('viper.output_path').'/compiled/'.$relativePath.'.php';
-
-        try {
-            $ast = $parser->parse($phpContent);
-        } catch (\PhpParser\Error $e) {
-            $obj = [
-                'message' => $e->getMessage(),
-                // todo: provide accurate line / stack trace
-            ];
-            fwrite(STDERR, json_encode($obj).PHP_EOL);
-
-            return Command::FAILURE;
-        }
-
-        $traverser = new NodeTraverser;
-        $instance = new class extends NodeVisitorAbstract
-        {
-            protected $compiledPath;
-
-            public function setPath($path)
-            {
-                $this->compiledPath = $path;
-            }
-
-            public function leaveNode(Node $node)
-            {
-                // Detect the "return new class" expression
-                if ($node instanceof Node\Stmt\Return_ &&
-                    $node->expr instanceof Node\Expr\New_ &&
-                    $node->expr->class instanceof Node\Stmt\Class_) {
-
-                    // Replace it with a named class
-                    $namedClass = $node->expr->class;
-                    $namedClass->name = new Node\Identifier(PageComponent::componentNameFromPath($this->compiledPath));
-
-                    // Return the class as a top-level statement
-                    return $namedClass;
-                }
-
-                return null;
-            }
-        };
-        $instance->setPath($relativePath);
-        $traverser->addVisitor($instance);
-
-        $modifiedAst = $traverser->traverse($ast);
-
-        $prettyPrinter = new Standard;
-        $final = $prettyPrinter->prettyPrintFile($modifiedAst);
+        $relativePath = str($this->option('filename'))->replaceStart(app(ViperConfig::class)->pagesPath(), '')->replaceStart('/', '')->replaceEnd('.'.$extension, '');
 
         if ($this->option('write') === 'true') {
-            File::ensureDirectoryExists(dirname($compiledPath));
-            File::put($compiledPath, $final);
             echo 'Compiled '.$relativePath;
             if ($this->option('transform') === 'true') {
                 Artisan::call('viper:generate');
             }
         } else {
-            $this->line($final);
+            $this->line($output);
         }
 
         return Command::SUCCESS;
-    }
-
-    public function getContent()
-    {
-        if (config('viper.mode') === 'sfc') {
-            $componentFile = File::get($this->option('filename'));
-
-            if (config('viper.framework') === 'react') {
-                $pattern = '/export\s+const\s+php\s*=\s*\/\*\*\s*@php\s*\*\/\s*`\s*(.*?)\s*`;/s';
-
-                return str($componentFile)->match($pattern);
-            }
-
-            return str($componentFile)->match('/<php>([\s\S]*?)<\/php>/s');
-        }
-
-        $extension = pathinfo($this->option('filename'), PATHINFO_EXTENSION);
-
-        $filename = str($this->option('filename'))->replaceEnd('.'.$extension, '.php');
-        if (! File::exists($filename)) {
-            return str('');
-        }
-        $componentFile = File::get($filename);
-
-        return str($componentFile)->replaceStart('<?php', '');
     }
 }

@@ -21,19 +21,19 @@ class PageComponent
 
     public array $layouts = [];
 
-    public function __construct(public string $basePath, public string $absolutePath)
+    public function __construct(public string $absolutePath)
     {
         $this->layouts = $this->getLayouts();
     }
 
     public function relativePath(): string
     {
-        return str($this->absolutePath)->replaceFirst($this->basePath, '')->replaceStart('/', '')->toString();
+        return str($this->absolutePath)->replaceFirst(app(ViperConfig::class)->pagesPath(), '')->replaceStart('/', '')->toString();
     }
 
     public function componentExtension()
     {
-        if (config('viper.framework') === 'react') {
+        if (app(ViperConfig::class)->isReact()) {
             return 'tsx';
         }
 
@@ -60,7 +60,7 @@ class PageComponent
             $ext = $this->componentExtension();
 
             $layoutPath = str($currentPath)->dirname()->append('/_layout.'.$ext)->ltrim('.')->ltrim('/');
-            $layoutAbsolutePath = $this->basePath.'/'.$layoutPath;
+            $layoutAbsolutePath = app(ViperConfig::class)->pagesPath().'/'.$layoutPath;
 
             if (File::exists($layoutAbsolutePath)) {
                 $layouts[] = \Ozmos\Viper\Facades\Viper::resolvePageComponent($layoutAbsolutePath);
@@ -116,6 +116,7 @@ class PageComponent
             ->replaceEnd('index', '')
           // replace any double+ slashes resulting from stripping out previous parts
             ->replaceMatches('/\/{2,}/', '/')
+            ->trim('/')
             ->whenEmpty(fn () => str('/'))
             ->toString();
     }
@@ -136,6 +137,7 @@ class PageComponent
             ->replaceEnd('index', '')
           // replace any double+ slashes resulting from stripping out previous parts
             ->replaceMatches('/\/{2,}/', '/')
+            ->trim('/')
             ->whenEmpty(fn () => str('/'))
             ->toString();
     }
@@ -157,6 +159,7 @@ class PageComponent
             ->replaceMatches('/(\{\.\.\.(.*?)\})/', fn ($match) => str($match[1])->replace('...', '')->trim('{')->trim('}')->append('?}')->prepend('{')->toString())
           // replace any double+ slashes resulting from stripping out previous parts
             ->replaceMatches('/\/{2,}/', '/')
+            ->trim('/')
             ->whenEmpty(fn () => str('/'))
             ->toString();
     }
@@ -165,7 +168,7 @@ class PageComponent
     {
         $ext = $this->componentExtension();
 
-        return config('viper.output_path').'/compiled/'.str($this->relativePath())->replaceEnd('.'.$ext, '.php');
+        return app(ViperConfig::class)->outputPath('compiled/'.str($this->relativePath())->replaceEnd('.'.$ext, '.php'));
     }
 
     public function pageInstance()
@@ -408,7 +411,7 @@ class PageComponent
     {
         $params = [];
 
-        $laravelParams = request()->route()->parameters();
+        $laravelParams = request()->route()?->parameters() ?? [];
         foreach ($laravelParams as $key => $value) {
             $modelClass = Viper::resolveModel(str($key)->pascal()->toString());
             if (class_exists($modelClass)) {

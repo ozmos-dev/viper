@@ -3,6 +3,7 @@
 namespace Ozmos\Viper\Generators;
 
 use Ozmos\Viper\PageComponent;
+use Ozmos\Viper\ViperConfig;
 
 class VueGenerator implements RouteGenerator
 {
@@ -28,13 +29,14 @@ class VueGenerator implements RouteGenerator
             fn ($matches) => '"component": '.$this->componentToImport[$matches[1]]
         )->toString();
 
-        $prevRoutes = file_get_contents(config('viper.pages_path').'/routes.ts');
+        $routesPath = app(ViperConfig::class)->pagesPath('routes.ts');
+        $prevRoutes = file_get_contents($routesPath);
 
         $str = view('viper::vue-routes', ['routes' => $routes, 'pages' => $pages])->render();
 
         if ($prevRoutes !== $str) {
             file_put_contents(
-                config('viper.pages_path').'/routes.ts',
+                $routesPath,
                 $str,
             );
         }

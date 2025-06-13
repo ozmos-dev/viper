@@ -53,7 +53,7 @@ export class Viper {
     return path.resolve(this.config.output_path, ...parts);
   }
 
-  async compileFile(id, content, generateTypes = true) {
+  async compileFile(id, content, generateRoutes = true) {
     const filter = createFilter(this.pageGlob());
 
     if (!filter(id) || !id.startsWith(this.absolutePagesDirectory())) {
@@ -62,7 +62,7 @@ export class Viper {
 
     try {
       const { stdout } = await execAsync(
-        `php artisan viper:compile --filename="${id}" --transform=${generateTypes ? "true" : "false"}`,
+        `php artisan viper:compile --filename="${id}" --transform=${generateRoutes ? "true" : "false"}`,
       );
       if (stdout) {
         console.log(stdout.toString());

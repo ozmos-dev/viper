@@ -39,16 +39,10 @@ class Viper
         return $this->modelPath.'\\'.$className;
     }
 
-    public function pagesPath()
-    {
-        return config('viper.pages_path');
-    }
-
     public function resolvePageComponent(string $absolutePath): ?PageComponent
     {
         if (! isset($this->pageComponents[$absolutePath])) {
             $this->pageComponents[$absolutePath] = new PageComponent(
-                $this->pagesPath(),
                 $absolutePath,
             );
         }
@@ -74,8 +68,8 @@ class Viper
 
     public function routes()
     {
-        $ext = config('viper.framework') === 'react' ? 'tsx' : 'vue';
-        $finder = Finder::create()->files()->in(config('viper.pages_path'))->name('*.'.$ext);
+        $ext = app(ViperConfig::class)->isReact() ? 'tsx' : 'vue';
+        $finder = Finder::create()->files()->in(app(ViperConfig::class)->pagesPath())->name('*.'.$ext);
 
         $files = collect($finder)->sort(function ($a, $b) {
             $aScore = $this->scoreRoute($a->getRelativePathname());

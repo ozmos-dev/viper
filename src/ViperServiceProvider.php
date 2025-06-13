@@ -44,5 +44,9 @@ class ViperServiceProvider extends PackageServiceProvider
                 default => new VueGenerator,
             };
         });
+
+        $this->app->singleton(ViperConfig::class, function () {
+            return new ViperConfig(...config('viper'));
+        });
     }
 }

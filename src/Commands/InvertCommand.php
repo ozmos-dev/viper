@@ -3,6 +3,7 @@
 namespace Ozmos\Viper\Commands;
 
 use Illuminate\Console\Command;
+use Ozmos\Viper\ViperConfig;
 use Symfony\Component\Finder\Finder;
 
 class InvertCommand extends Command
@@ -13,8 +14,8 @@ class InvertCommand extends Command
 
     public function handle()
     {
-        $mode = config('viper.mode');
-        $pagesDir = config('viper.pages_path');
+        $mode = app(ViperConfig::class)->isSfc() ? 'adjacent' : 'sfc';
+        $pagesDir = app(ViperConfig::class)->pagesPath();
 
         if ($mode === 'sfc') {
             $vueFiles = collect(Finder::create()->files()->in($pagesDir)->name('*.vue'));
@@ -33,7 +34,7 @@ class InvertCommand extends Command
             }
         }
 
-        if ($mode === 'adjacent') {
+        if (app(ViperConfig::class)->isAdjacent()) {
             $phpFiles = collect(Finder::create()->files()->in($pagesDir)->name('*.php'));
 
             foreach ($phpFiles as $phpFile) {

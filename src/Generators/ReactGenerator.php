@@ -3,6 +3,7 @@
 namespace Ozmos\Viper\Generators;
 
 use Ozmos\Viper\PageComponent;
+use Ozmos\Viper\ViperConfig;
 
 class ReactGenerator implements RouteGenerator
 {
@@ -23,13 +24,15 @@ class ReactGenerator implements RouteGenerator
             $this->addChildToLayout($page);
         }
 
-        $prevRoutes = file_get_contents(config('viper.pages_path').'/routes.ts');
+        $routesPath = app(ViperConfig::class)->pagesPath('routes.ts');
+
+        $prevRoutes = file_get_contents($routesPath);
 
         $str = view('viper::react-routes', ['routes' => $this->routes, 'pages' => $pages])->render();
 
         if ($prevRoutes !== $str) {
             file_put_contents(
-                config('viper.pages_path').'/routes.ts',
+                $routesPath,
                 $str,
             );
         }
