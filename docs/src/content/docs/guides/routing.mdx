@@ -228,8 +228,8 @@ export default function Post() {
 `}
   php={`
 return new class {
-   #[\Ozmos\Viper\Attrs\Prop]
-   public function post(\App\Models\Post $post)
+   #[\\Ozmos\\Viper\\Attrs\\Prop]
+   public function post(\\App\\Models\\Post $post)
    {
      return $post;
    }
