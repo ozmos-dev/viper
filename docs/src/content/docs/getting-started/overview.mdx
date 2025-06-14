@@ -51,7 +51,7 @@ import { usePage } from '@ozmos/viper-vue';
 
 const page = usePage<ViperGen.Example>();
 
-const { data: user } = page.useProp('user');
+const { data: user } = page.useQuery('user');
 
 const { mutate, state, isPending } = page.useForm('updateProfile', {
    state: {
@@ -70,7 +70,7 @@ import { usePage } from '@ozmos/viper-react';
 export default function Page() {
    const page = usePage<ViperGen.Example>();
 
-   const { data: user } = page.useProp('user');
+   const { data: user } = page.useQuery('user');
 
    const { mutate, state, setState, isPending } = page.useForm('updateProfile', {
      state: {
