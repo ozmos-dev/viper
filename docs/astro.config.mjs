@@ -28,6 +28,10 @@ export default defineConfig({
             { label: "Installation", link: "/getting-started/installation" },
             { label: "How It Works", link: "/getting-started/how-it-works" },
             { label: "SFC vs Adjacent", link: "/guides/modes" },
+            {
+              label: "AI Editors / llms.txt",
+              link: "/getting-started/ai-llms",
+            },
           ],
         },
         {
