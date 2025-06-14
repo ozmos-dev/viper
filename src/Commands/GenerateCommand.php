@@ -4,7 +4,7 @@ namespace Ozmos\Viper\Commands;
 
 use Illuminate\Console\Command;
 use Ozmos\Viper\Facades\Viper;
-use Ozmos\Viper\VueRouterConfigGenerator;
+use Ozmos\Viper\Generators\RouteGenerator;
 
 class GenerateCommand extends Command
 {
@@ -14,6 +14,6 @@ class GenerateCommand extends Command
 
     public function handle()
     {
-        (new VueRouterConfigGenerator)->generate(Viper::pageComponents());
+        app(RouteGenerator::class)->generate(Viper::pageComponents());
     }
 }

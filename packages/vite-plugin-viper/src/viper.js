@@ -29,6 +29,14 @@ export class Viper {
     return viper;
   }
 
+  pageGlob() {
+    if (this.config.framework === "react") {
+      return "**/*.tsx";
+    }
+
+    return "**/*.vue";
+  }
+
   async init() {
     await fs.mkdir(this.absoluteOutputPath(["compiled"]), { recursive: true });
   }
@@ -45,8 +53,8 @@ export class Viper {
     return path.resolve(this.config.output_path, ...parts);
   }
 
-  async compileFile(id, content, generateTypes = true) {
-    const filter = createFilter("**/*.vue");
+  async compileFile(id, content, generateRoutes = true) {
+    const filter = createFilter(this.pageGlob());
 
     if (!filter(id) || !id.startsWith(this.absolutePagesDirectory())) {
       return content;
@@ -54,7 +62,7 @@ export class Viper {
 
     try {
       const { stdout } = await execAsync(
-        `php artisan viper:compile --filename="${id}" --transform=${generateTypes ? "true" : "false"}`,
+        `php artisan viper:compile --filename="${id}" --transform=${generateRoutes ? "true" : "false"}`,
       );
       if (stdout) {
         console.log(stdout.toString());

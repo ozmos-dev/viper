@@ -2,6 +2,8 @@
 title: Installation
 ---
 import {Aside} from "@astrojs/starlight/components";
+import FrameworkTabs from '../../../components/framework-tabs.astro'
+import FrameworkTabsCode from '../../../components/framework-tabs-code.astro'
 
 <Aside type={'caution'}>
   Viper is still in active development and you may encounter strange behaviour or breaking changes until it hits 1.0 release
@@ -13,10 +15,22 @@ import {Aside} from "@astrojs/starlight/components";
 
 The fastest way to get started with Viper is to generate a new application using our starter kit:
 
+
+<FrameworkTabs>
+<Fragment slot="vue">
 ```bash
 laravel new app --using=ozmos/viper-vue-shadcn
 cd app && bun i && composer dev
 ```
+</Fragment>
+
+<Fragment slot="react">
+```bash
+laravel new app --using=ozmos/viper-react-shadcn
+cd app && bun i && composer dev
+```
+</Fragment>
+</FrameworkTabs>
 
 ## Install Into a Fresh App
 
@@ -26,7 +40,7 @@ Below are the instructions for installing Viper WITHOUT using a starter kit.
 
 Create a new laravel app without existing templates/starter kits.
 
-```
+```bash
 laravel new app
 ```
 
@@ -65,6 +79,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
 Create the base layout file:
 
+<FrameworkTabs>
+<Fragment slot="vue">
 ```blade
 // resources/views/app.blade.php
 <html lang="en">
@@ -78,10 +94,28 @@ Create the base layout file:
 </body>
 </html>
 ```
+</Fragment>
+<Fragment slot="react">
+```blade
+// resources/views/app.blade.php
+<html lang="en">
+<head>
+    @viperHead
+    @routes
+    @viteReactRefresh
+    @vite(['resources/js/app.tsx'])
+</head>
+<body>
+    @viper
+</body>
+</html>
+```
+</Fragment>
+</FrameworkTabs>
 
 Add the needed typescript transformer config
 
-```
+```bash
 php artisan vendor:publish --provider="Spatie\LaravelTypeScriptTransformer\TypeScriptTransformerServiceProvider"
 ```
 
@@ -105,14 +139,32 @@ return [
 ];
 ```
 
-### Frontend / Vue
+Publish the viper config:
+
+```bash
+php artisan vendor:publish --tag="viper-config"
+```
+
+### Frontend
 
 Install the required npm packages
 
+<FrameworkTabs>
+<Fragment slot="vue">
 ```bash
 bun add @ozmos/viper-vue @ozmos/vite-plugin-viper vue vue-router @tanstack/vue-query ziggy-js @vitejs/plugin-vue
 ```
+</Fragment>
+<Fragment slot="react">
+```bash
+bun add @ozmos/viper-react @ozmos/vite-plugin-viper react react-dom react-router @tanstack/react-query ziggy-js @vitejs/plugin-react
+```
+</Fragment>
+</FrameworkTabs>
 
+
+<FrameworkTabs>
+<Fragment slot="vue">
 Register the viper vite plugin BEFORE the vue plugin
 
 ```ts
@@ -120,8 +172,8 @@ Register the viper vite plugin BEFORE the vue plugin
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
+import viper from '@ozmos/vite-plugin-viper';
 import vue from '@vitejs/plugin-vue';
-import viper from '../viper/packages/vite-plugin-viper/src/index';
 
 export default defineConfig({
   plugins: [
@@ -135,10 +187,39 @@ export default defineConfig({
   ],
 });
 ```
+</Fragment>
+<Fragment slot="react">
+Register the viper vite plugin BEFORE the react plugin
 
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
+import viper from '@ozmos/vite-plugin-viper';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [
+    laravel({
+      input: ['resources/css/app.css', 'resources/js/app.tsx'],
+      refresh: true,
+    }),
+    tailwindcss(),
+    viper(),
+    react(),
+  ],
+});
+```
+</Fragment>
+</FrameworkTabs>
+
+<FrameworkTabs>
+<Fragment slot="vue">
 Create your entry file `resources/js/app.ts`
 
 ```ts
+// resources/js/app.ts
 import { createApp, h } from 'vue';
 import { RouterView } from 'vue-router';
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
@@ -157,6 +238,32 @@ createApp({ render: () => h(RouterView) })
   })
   .mount(document.getElementById('app')!);
 ```
+</Fragment>
+<Fragment slot="react">
+Create your entry file `resources/js/app.tsx`
+
+```ts
+// resources/js/app.tsx
+import '../css/app.css';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { router } from './pages/routes';
+import { createRoot } from 'react-dom/client';
+import { RouterProvider } from 'react-router';
+import { ViperProvider } from '@ozmos/viper-react';
+
+const queryClient = new QueryClient();
+
+createRoot(document.getElementById('app')!).render(
+  <QueryClientProvider client={queryClient}>
+    <ViperProvider>
+      <RouterProvider router={router} />
+    </ViperProvider>
+  </QueryClientProvider>,
+);
+```
+</Fragment>
+</FrameworkTabs>
+
 
 Create a stub `pages/routes.ts` file so that it doesn't error during first build. This will get replaced once you run the vite server.
 
@@ -167,10 +274,10 @@ export const router = {};
 
 Create your first page:
 
-```vue
-// resources/js/pages/index.vue
+<FrameworkTabsCode
+  filename="resources/js/pages/index"
+  vue={`
 <template>
-  <h1>My Viper App</h1>
   <p>The server time is {{ serverTime }}</p>
 </template>
 
@@ -181,17 +288,29 @@ const page = usePage<ViperGen.Index>();
 
 const { data: serverTime } = page.useQuery('serverTime');
 </script>
+  `}
+  react={`
+import { usePage } from '@ozmos/viper-react';
 
-<php>
+export default function Index() {
+   const page = usePage<ViperGen.Index>();
+
+   const { data: serverTime } = page.useQuery('serverTime');
+
+   return <p>The server time is {serverTime}</p>
+}  
+`}
+  php={`
 return new class {
-  #[\Ozmos\Viper\Attrs\Prop]
-  public function serverTime(): string
-  {
+   #[\\Ozmos\\Viper\\Attrs\\Prop]
+   public function serverTime(): string
+   {
     return now()->toIso8601String();
-  }
-};
-</php>
-```
+   }
+};`}
+/>
+
+
 
 Now serve your app and head to `localhost:8000`
 

@@ -1,0 +1,24 @@
+---
+import { TabItem, Tabs } from '@astrojs/starlight/components';
+
+const { withModes = false} = Astro.props;
+---
+
+<Tabs syncKey='framework'>
+    <TabItem label={"Vue"}>
+        <slot name="vue" />
+    </TabItem>
+    {withModes && (
+        <TabItem label="Vue (SFC)">
+            <slot name="vue-sfc" />
+        </TabItem>
+    )}
+    <TabItem label={"React"}>
+        <slot name="react" />
+    </TabItem>
+    {withModes && (
+        <TabItem label="React (SFC)">
+            <slot name="react-sfc" />
+        </TabItem>
+    )}
+</Tabs>

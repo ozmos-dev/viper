@@ -17,44 +17,48 @@ class PageTransformer implements Transformer
 {
     use TransformsTypes;
 
-    public function transform(ReflectionClass $class, string $name): ?TransformedType
+    public function transform(ReflectionClass $class, string $name): null|TransformedType
     {
-        $missingSymbols = new MissingSymbolsCollection;
+        $missingSymbols = new MissingSymbolsCollection();
 
         $propLines = [];
         $actionLines = [];
 
         $page = Viper::pageComponentFromCompiledPath($class->getFileName());
 
-        $instances = collect($page->layouts)->push($page)->map(fn (PageComponent $page) => $page->pageInstance());
+        $instances = collect($page->layouts)->push($page)->map(fn(PageComponent $page) => $page->pageInstance());
 
         foreach ($instances as $instance) {
             $reflect = new \ReflectionClass($instance);
             foreach ($reflect->getMethods() as $method) {
                 $propAttributes = $method->getAttributes(Prop::class);
 
-                if (! empty($propAttributes)) {
+                if (!empty($propAttributes)) {
                     $propLines[] = "{$method->getName()}: {$this->reflectionToTypeScript($method, $missingSymbols)}";
                 }
 
                 $actions = $method->getAttributes(Action::class);
 
-                if (! empty($actions)) {
+                if (!empty($actions)) {
                     $actionLines[] = $this->transformAction($method, $missingSymbols);
                 }
             }
         }
 
-        $params = PageComponent::parseRouteParameters($class->getFileName())->map(fn ($key) => "{$key}: string")->toArray();
+        $params = PageComponent::parseRouteParameters($class->getFileName())
+            ->map(fn($key) => "{$key}: string")
+            ->toArray();
 
-        $definition = '{ props: {'.implode(';', $propLines).'}; actions: {'.implode(';', $actionLines).'}; params: {'.implode(';', $params).'}; }';
+        $definition =
+            '{ props: {' .
+            implode(';', $propLines) .
+            '}; actions: {' .
+            implode(';', $actionLines) .
+            '}; params: {' .
+            implode(';', $params) .
+            '}; }';
 
-        return TransformedType::create(
-            $class,
-            $name,
-            $definition,
-            $missingSymbols,
-        );
+        return TransformedType::create($class, $name, $definition, $missingSymbols);
     }
 
     public function transformAction(\ReflectionMethod $method, MissingSymbolsCollection $missingSymbols): string

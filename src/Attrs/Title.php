@@ -7,5 +7,7 @@ use Attribute;
 #[Attribute(Attribute::TARGET_CLASS)]
 class Title
 {
-    public function __construct(public string $title = '') {}
+    public function __construct(
+        public string $title = '',
+    ) {}
 }

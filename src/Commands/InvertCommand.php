@@ -3,6 +3,8 @@
 namespace Ozmos\Viper\Commands;
 
 use Illuminate\Console\Command;
+use Ozmos\Viper\Inverters\ModeInverter;
+use Ozmos\Viper\ViperConfig;
 use Symfony\Component\Finder\Finder;
 
 class InvertCommand extends Command
@@ -13,46 +15,21 @@ class InvertCommand extends Command
 
     public function handle()
     {
-        $mode = config('viper.mode');
-        $pagesDir = config('viper.pages_path');
+        $inverter = app(ModeInverter::class);
 
-        if ($mode === 'sfc') {
-            $vueFiles = collect(Finder::create()->files()->in($pagesDir)->name('*.vue'));
+        $this->warn('This will directly modify your files. Make sure you have a backup.');
 
-            foreach ($vueFiles as $vueFile) {
-                $content = file_get_contents($vueFile);
-
-                if (preg_match('/<php>(.*?)<\/php>/s', $content, $matches)) {
-                    $phpContent = "<?php\n".trim($matches[1])."\n";
-                    $phpFile = preg_replace('/\.vue$/', '.php', $vueFile);
-                    file_put_contents($phpFile, $phpContent);
-
-                    $newVueContent = preg_replace('/<php>.*?<\/php>/s', '', $content);
-                    file_put_contents($vueFile, $newVueContent);
-                }
-            }
+        if (!$this->confirm('Are you sure you want to continue?')) {
+            $this->line('Aborting...');
+            return;
         }
 
-        if ($mode === 'adjacent') {
-            $phpFiles = collect(Finder::create()->files()->in($pagesDir)->name('*.php'));
-
-            foreach ($phpFiles as $phpFile) {
-                $phpContent = file_get_contents($phpFile);
-                $phpContent = preg_replace('/^<\?php\s*/', '', $phpContent);
-
-                $vueFile = preg_replace('/\.php$/', '.vue', $phpFile);
-                if (file_exists($vueFile)) {
-                    $vueContent = file_get_contents($vueFile);
-                    $vueContent = preg_replace('/<php>.*?<\/php>/s', '', $vueContent); // remove existing <php> blocks
-                    $vueContent .= "\n<php>\n".trim($phpContent)."\n</php>\n";
-                    file_put_contents($vueFile, $vueContent);
-                }
-
-                unlink($phpFile);
-            }
+        if (app(ViperConfig::class)->isSfc()) {
+            $inverter->toAdjacent();
+        } else {
+            $inverter->toSfc();
         }
 
-        $this->warn('DO NOT FORGET TO UPDATE config/viper.php');
-        $this->info("'mode' => ".($mode === 'sfc' ? "'adjacent'" : "'sfc'"));
+        $this->info('Done!');
     }
 }
