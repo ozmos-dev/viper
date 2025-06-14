@@ -1,7 +1,7 @@
 <?php
 
-return new #[\Ozmos\Viper\Attrs\Name('login')] class
-{
+return new #[\Ozmos\Viper\Attrs\Name('login')]
+class {
     #[\Ozmos\Viper\Attrs\Prop]
     public function loginProp()
     {

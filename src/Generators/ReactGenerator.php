@@ -31,17 +31,14 @@ class ReactGenerator implements RouteGenerator
         $str = view('viper::react-routes', ['routes' => $this->routes, 'pages' => $pages])->render();
 
         if ($prevRoutes !== $str) {
-            file_put_contents(
-                $routesPath,
-                $str,
-            );
+            file_put_contents($routesPath, $str);
         }
     }
 
     private function registerComponent(PageComponent $page)
     {
         $componentName = $page->componentName();
-        if (! isset($this->componentToImport[$componentName])) {
+        if (!isset($this->componentToImport[$componentName])) {
             $relativePath = $page->relativePath();
             $this->componentToImport[$componentName] = "() => import('./{$relativePath}')";
         }
@@ -79,7 +76,7 @@ class ReactGenerator implements RouteGenerator
             foreach ($currentRoutes as &$route) {
                 if ($route['component'] === $layoutComponent) {
                     // Layout found, move to its children
-                    if (! isset($route['children'])) {
+                    if (!isset($route['children'])) {
                         $route['children'] = [];
                     }
                     $currentRoutes = &$route['children'];
@@ -90,10 +87,10 @@ class ReactGenerator implements RouteGenerator
             }
 
             // If layout not found, create it
-            if (! $layoutFound) {
+            if (!$layoutFound) {
                 // For nested layouts, make the path relative to parent
                 $layoutRelativePath = $layoutFullPath;
-                if (! empty($accumulatedPath) && str_starts_with($layoutFullPath, $accumulatedPath.'/')) {
+                if (!empty($accumulatedPath) && str_starts_with($layoutFullPath, $accumulatedPath . '/')) {
                     $layoutRelativePath = substr($layoutFullPath, strlen($accumulatedPath) + 1);
                 }
 
@@ -114,7 +111,7 @@ class ReactGenerator implements RouteGenerator
 
         // Make the page path relative to the accumulated path
         $relativePath = $fullPath;
-        if (! empty($accumulatedPath) && str_starts_with($fullPath, $accumulatedPath.'/')) {
+        if (!empty($accumulatedPath) && str_starts_with($fullPath, $accumulatedPath . '/')) {
             $relativePath = substr($fullPath, strlen($accumulatedPath) + 1);
         } elseif ($fullPath === $accumulatedPath) {
             // If the paths are identical, use empty string for index route

@@ -16,7 +16,7 @@ class PageController
 
         $only = str(request()->header('x-viper-only', ''))->explode(',')->toArray();
 
-        $params = $page->routeParameters()->mapWithKeys(fn ($key) => [$key => request()->route()->parameter($key)]);
+        $params = $page->routeParameters()->mapWithKeys(fn($key) => [$key => request()->route()->parameter($key)]);
 
         $data = [
             'page' => [

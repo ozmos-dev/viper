@@ -15,10 +15,11 @@ class PhpPreamble extends NodeVisitorAbstract
     public function leaveNode(Node $node)
     {
         // Detect the "return new class" expression
-        if ($node instanceof Node\Stmt\Return_ &&
-            $node->expr instanceof Node\Expr\New_ &&
-            $node->expr->class instanceof Node\Stmt\Class_) {
-
+        if (
+            $node instanceof Node\Stmt\Return_ &&
+                $node->expr instanceof Node\Expr\New_ &&
+                $node->expr->class instanceof Node\Stmt\Class_
+        ) {
             // Replace it with a named class
             $namedClass = $node->expr->class;
             $namedClass->name = new Node\Identifier(PageComponent::componentNameFromPath($this->absolutePath));

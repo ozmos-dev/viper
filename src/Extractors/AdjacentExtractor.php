@@ -10,9 +10,9 @@ class AdjacentExtractor implements PhpExtractor
     {
         $extension = pathinfo($filename, PATHINFO_EXTENSION);
 
-        $filename = str($filename)->replaceEnd('.'.$extension, '.php');
+        $filename = str($filename)->replaceEnd('.' . $extension, '.php');
 
-        if (! File::exists($filename)) {
+        if (!File::exists($filename)) {
             return str('');
         }
 

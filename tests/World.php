@@ -15,8 +15,8 @@ class World
     {
         app()->singleton(ViperConfig::class, function () {
             return new ViperConfig(
-                output_path: $this->rootPath.'/.viper',
-                pages_path: $this->rootPath.'/pages',
+                output_path: $this->rootPath . '/.viper',
+                pages_path: $this->rootPath . '/pages',
                 framework: 'vue',
                 mode: 'sfc',
             );

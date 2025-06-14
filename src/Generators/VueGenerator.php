@@ -24,10 +24,12 @@ class VueGenerator implements RouteGenerator
             $this->addChildToLayout($page);
         }
 
-        $routes = str(json_encode($this->routes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))->replaceMatches(
-            '/"component":\s*"([^"]+)"/',
-            fn ($matches) => '"component": '.$this->componentToImport[$matches[1]]
-        )->toString();
+        $routes = str(json_encode($this->routes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))
+            ->replaceMatches(
+                '/"component":\s*"([^"]+)"/',
+                fn($matches) => '"component": ' . $this->componentToImport[$matches[1]],
+            )
+            ->toString();
 
         $routesPath = app(ViperConfig::class)->pagesPath('routes.ts');
         $prevRoutes = file_get_contents($routesPath);
@@ -35,17 +37,14 @@ class VueGenerator implements RouteGenerator
         $str = view('viper::vue-routes', ['routes' => $routes, 'pages' => $pages])->render();
 
         if ($prevRoutes !== $str) {
-            file_put_contents(
-                $routesPath,
-                $str,
-            );
+            file_put_contents($routesPath, $str);
         }
     }
 
     private function registerComponent(PageComponent $page)
     {
         $componentName = $page->componentName();
-        if (! isset($this->componentToImport[$componentName])) {
+        if (!isset($this->componentToImport[$componentName])) {
             $relativePath = $page->relativePath();
             $this->componentToImport[$componentName] = "() => import('./{$relativePath}')";
         }
@@ -82,7 +81,7 @@ class VueGenerator implements RouteGenerator
             foreach ($currentRoutes as &$route) {
                 if ($route['component'] === $layoutComponent) {
                     // Layout found, move to its children
-                    if (! isset($route['children'])) {
+                    if (!isset($route['children'])) {
                         $route['children'] = [];
                     }
                     $currentRoutes = &$route['children'];
@@ -93,10 +92,10 @@ class VueGenerator implements RouteGenerator
             }
 
             // If layout not found, create it
-            if (! $layoutFound) {
+            if (!$layoutFound) {
                 // For nested layouts, make the path relative to parent
                 $layoutRelativePath = $layoutFullPath;
-                if (! empty($accumulatedPath) && str_starts_with($layoutFullPath, $accumulatedPath.'/')) {
+                if (!empty($accumulatedPath) && str_starts_with($layoutFullPath, $accumulatedPath . '/')) {
                     $layoutRelativePath = substr($layoutFullPath, strlen($accumulatedPath) + 1);
                 }
 
@@ -116,7 +115,7 @@ class VueGenerator implements RouteGenerator
 
         // Make the page path relative to the accumulated path
         $relativePath = $fullPath;
-        if (! empty($accumulatedPath) && str_starts_with($fullPath, $accumulatedPath.'/')) {
+        if (!empty($accumulatedPath) && str_starts_with($fullPath, $accumulatedPath . '/')) {
             $relativePath = substr($fullPath, strlen($accumulatedPath) + 1);
         } elseif ($fullPath === $accumulatedPath) {
             // If the paths are identical, use empty string for index route

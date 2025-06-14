@@ -9,8 +9,12 @@ use Spatie\LaravelData\Support\DataProperty;
 #[\Attribute(\Attribute::TARGET_PROPERTY)]
 class FormDataValue implements InjectsPropertyValue
 {
-    public function resolve(DataProperty $dataProperty, mixed $payload, array $properties, CreationContext $creationContext): mixed
-    {
+    public function resolve(
+        DataProperty $dataProperty,
+        mixed $payload,
+        array $properties,
+        CreationContext $creationContext,
+    ): mixed {
         // todo: don't decode every time
         $payload = json_decode($payload['state'], true);
 

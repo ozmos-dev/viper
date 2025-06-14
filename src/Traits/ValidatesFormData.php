@@ -10,7 +10,7 @@ trait ValidatesFormData
     public static function withValidator(Validator $validator): void
     {
         $data = $validator->getData();
-        $files = collect($data)->filter(fn ($item) => $item instanceof UploadedFile);
+        $files = collect($data)->filter(fn($item) => $item instanceof UploadedFile);
         $validator->setData([
             ...json_decode($data['state'], true),
             ...$files->toArray(),

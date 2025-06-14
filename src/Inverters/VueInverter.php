@@ -11,7 +11,12 @@ class VueInverter
     public function toSfc()
     {
         $pagesDir = app(ViperConfig::class)->pagesPath();
-        $phpFiles = collect(Finder::create()->files()->in($pagesDir)->name('*.php'));
+        $phpFiles = collect(
+            Finder::create()
+                ->files()
+                ->in($pagesDir)
+                ->name('*.php'),
+        );
 
         foreach ($phpFiles as $phpFile) {
             $phpContent = file_get_contents($phpFile);
@@ -21,7 +26,7 @@ class VueInverter
             if (file_exists($vueFile)) {
                 $vueContent = file_get_contents($vueFile);
                 $vueContent = preg_replace(VueSfcExtractor::PATTERN, '', $vueContent); // remove existing <php> blocks
-                $vueContent .= "\n<php>\n".trim($phpContent)."\n</php>\n";
+                $vueContent .= "\n<php>\n" . trim($phpContent) . "\n</php>\n";
                 file_put_contents($vueFile, $vueContent);
             }
 
@@ -32,13 +37,18 @@ class VueInverter
     public function toAdjacent()
     {
         $pagesDir = app(ViperConfig::class)->pagesPath();
-        $vueFiles = collect(Finder::create()->files()->in($pagesDir)->name('*.vue'));
+        $vueFiles = collect(
+            Finder::create()
+                ->files()
+                ->in($pagesDir)
+                ->name('*.vue'),
+        );
 
         foreach ($vueFiles as $vueFile) {
             $content = file_get_contents($vueFile);
 
             if (preg_match(VueSfcExtractor::PATTERN, $content, $matches)) {
-                $phpContent = "<?php\n".trim($matches[1])."\n";
+                $phpContent = "<?php\n" . trim($matches[1]) . "\n";
                 $phpFile = preg_replace('/\.vue$/', '.php', $vueFile);
                 file_put_contents($phpFile, $phpContent);
 

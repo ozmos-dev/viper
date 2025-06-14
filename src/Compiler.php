@@ -20,15 +20,19 @@ class Compiler
 
     public function compile()
     {
-        $parser = (new ParserFactory)->createForVersion(PhpVersion::getHostVersion());
+        $parser = (new ParserFactory())->createForVersion(PhpVersion::getHostVersion());
 
-        $phpContent = str(app(PhpExtractor::class)->extract($this->filename))->prepend('<?php'.PHP_EOL.PHP_EOL.'namespace ViperGen;'.PHP_EOL.PHP_EOL);
+        $phpContent = str(app(PhpExtractor::class)->extract($this->filename))
+            ->prepend('<?php' . PHP_EOL . PHP_EOL . 'namespace ViperGen;' . PHP_EOL . PHP_EOL);
 
         $extension = pathinfo($this->filename, PATHINFO_EXTENSION);
 
-        $relativePath = str($this->filename)->replaceStart(app(ViperConfig::class)->pagesPath(), '')->replaceStart('/', '')->replaceEnd('.'.$extension, '');
+        $relativePath = str($this->filename)
+            ->replaceStart(app(ViperConfig::class)->pagesPath(), '')
+            ->replaceStart('/', '')
+            ->replaceEnd('.' . $extension, '');
 
-        $compiledPath = app(ViperConfig::class)->outputPath('compiled/'.$relativePath.'.php');
+        $compiledPath = app(ViperConfig::class)->outputPath('compiled/' . $relativePath . '.php');
 
         try {
             $ast = $parser->parse($phpContent);
@@ -37,7 +41,7 @@ class Compiler
                 'message' => $e->getMessage(),
                 // todo: provide accurate line / stack trace
             ];
-            fwrite(STDERR, json_encode($obj).PHP_EOL);
+            fwrite(STDERR, json_encode($obj) . PHP_EOL);
 
             return Command::FAILURE;
         }
@@ -54,13 +58,13 @@ class Compiler
 
     private function addRequiredPhpPreamble(string $relativePath, array $ast)
     {
-        $traverser = new NodeTraverser;
+        $traverser = new NodeTraverser();
         $instance = new PhpPreamble($relativePath);
         $traverser->addVisitor($instance);
 
         $modifiedAst = $traverser->traverse($ast);
 
-        $prettyPrinter = new Standard;
+        $prettyPrinter = new Standard();
 
         return $prettyPrinter->prettyPrintFile($modifiedAst);
     }

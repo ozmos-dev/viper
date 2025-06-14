@@ -11,14 +11,14 @@ use Spatie\TypeScriptTransformer\Structures\TransformedType;
 
 class PageCollector extends Collector
 {
-    public function getTransformedType(ReflectionClass $class): ?TransformedType
+    public function getTransformedType(ReflectionClass $class): null|TransformedType
     {
-        if (! str($class->getFileName())->startsWith(app(ViperConfig::class)->outputPath())) {
+        if (!str($class->getFileName())->startsWith(app(ViperConfig::class)->outputPath())) {
             return null;
         }
 
         $page = Viper::pageComponentFromCompiledPath($class->getFileName());
 
-        return (new PageTransformer)->transform($class, $page->componentName());
+        return (new PageTransformer())->transform($class, $page->componentName());
     }
 }

@@ -1,7 +1,6 @@
 <?php
 
-return new class
-{
+return new class {
     #[\Ozmos\Viper\Attrs\Prop]
     public function rootLayoutProp()
     {

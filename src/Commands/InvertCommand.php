@@ -17,7 +17,7 @@ class InvertCommand extends Command
     {
         $inverter = app(ModeInverter::class);
 
-        $this->warn("This will directly modify your files. Make sure you have a backup.");
+        $this->warn('This will directly modify your files. Make sure you have a backup.');
 
         if (!$this->confirm('Are you sure you want to continue?')) {
             $this->line('Aborting...');

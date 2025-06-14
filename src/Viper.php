@@ -11,7 +11,7 @@ class Viper
     /** @var array<string, PageComponent> */
     private array $pageComponents = [];
 
-    private ?string $modelPath = Viper::DEFAULT_MODEL_PATH;
+    private null|string $modelPath = Viper::DEFAULT_MODEL_PATH;
 
     public function autoDiscoverModels(string|bool $namespace = true)
     {
@@ -30,27 +30,25 @@ class Viper
         $this->modelPath = $namespace;
     }
 
-    public function resolveModel($className): ?string
+    public function resolveModel($className): null|string
     {
         if (is_null($this->modelPath)) {
             return null;
         }
 
-        return $this->modelPath.'\\'.$className;
+        return $this->modelPath . '\\' . $className;
     }
 
-    public function resolvePageComponent(string $absolutePath): ?PageComponent
+    public function resolvePageComponent(string $absolutePath): null|PageComponent
     {
-        if (! isset($this->pageComponents[$absolutePath])) {
-            $this->pageComponents[$absolutePath] = new PageComponent(
-                $absolutePath,
-            );
+        if (!isset($this->pageComponents[$absolutePath])) {
+            $this->pageComponents[$absolutePath] = new PageComponent($absolutePath);
         }
 
         return $this->pageComponents[$absolutePath];
     }
 
-    public function pageComponentFromCompiledPath(string $compiledPath): ?PageComponent
+    public function pageComponentFromCompiledPath(string $compiledPath): null|PageComponent
     {
         foreach ($this->pageComponents as $k => $pageComponent) {
             if ($pageComponent->compiledPath() === $compiledPath) {
@@ -69,18 +67,22 @@ class Viper
     public function routes()
     {
         $ext = app(ViperConfig::class)->isReact() ? 'tsx' : 'vue';
-        $finder = Finder::create()->files()->in(app(ViperConfig::class)->pagesPath())->name('*.'.$ext);
+        $finder = Finder::create()
+            ->files()
+            ->in(app(ViperConfig::class)->pagesPath())
+            ->name('*.' . $ext);
 
-        $files = collect($finder)->sort(function ($a, $b) {
-            $aScore = $this->scoreRoute($a->getRelativePathname());
-            $bScore = $this->scoreRoute($b->getRelativePathname());
+        $files = collect($finder)
+            ->sort(function ($a, $b) {
+                $aScore = $this->scoreRoute($a->getRelativePathname());
+                $bScore = $this->scoreRoute($b->getRelativePathname());
 
-            if ($aScore !== $bScore) {
-                return $aScore <=> $bScore;
-            }
+                if ($aScore !== $bScore) {
+                    return $aScore <=> $bScore;
+                }
 
-            return strlen($a->getRelativePathname()) <=> strlen($b->getRelativePathname());
-        });
+                return strlen($a->getRelativePathname()) <=> strlen($b->getRelativePathname());
+            });
 
         foreach ($files as $file) {
             $this->resolvePageComponent($file->getRealPath())?->register();
@@ -89,7 +91,10 @@ class Viper
 
     public function scoreRoute(string $path): int
     {
-        return str($path)->trim('/')->replaceEnd('.vue', '')->explode('/')
+        return str($path)
+            ->trim('/')
+            ->replaceEnd('.vue', '')
+            ->explode('/')
             ->reduce(function ($score, $segment) {
                 if (str($segment)->startsWith('[') && str($segment)->endsWith(']')) {
                     return $score + 10;

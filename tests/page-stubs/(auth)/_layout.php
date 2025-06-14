@@ -1,10 +1,8 @@
 <?php
 
-return new
-#[\Ozmos\Viper\Attrs\Name('auth.')]
+return new #[\Ozmos\Viper\Attrs\Name('auth.')]
 #[\Ozmos\Viper\Attrs\Middleware(['guest'])]
-class
-{
+class {
     #[\Ozmos\Viper\Attrs\Prop]
     public function authLayoutProp()
     {

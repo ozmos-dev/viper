@@ -47,8 +47,8 @@ class ViperServiceProvider extends PackageServiceProvider
 
         $this->app->bind(RouteGenerator::class, function () {
             return match (config('viper.framework')) {
-                'react' => new ReactGenerator,
-                default => new VueGenerator,
+                'react' => new ReactGenerator(),
+                default => new VueGenerator(),
             };
         });
 
@@ -58,22 +58,22 @@ class ViperServiceProvider extends PackageServiceProvider
 
         $this->app->bind(PhpExtractor::class, function () {
             if (config('viper.mode') === 'adjacent') {
-                return new AdjacentExtractor;
+                return new AdjacentExtractor();
             }
 
             if (config('viper.framework') === 'react') {
-                return new ReactSfcExtractor;
+                return new ReactSfcExtractor();
             }
 
-            return new VueSfcExtractor;
+            return new VueSfcExtractor();
         });
 
         $this->app->bind(ModeInverter::class, function () {
             if (config('viper.framework') === 'react') {
-                return new ReactInverter;
+                return new ReactInverter();
             }
 
-            return new VueInverter;
+            return new VueInverter();
         });
     }
 }

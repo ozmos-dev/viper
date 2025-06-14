@@ -21,12 +21,15 @@ class CompileCommand extends Command
         );
 
         $extension = pathinfo($this->option('filename'), PATHINFO_EXTENSION);
-        $relativePath = str($this->option('filename'))->replaceStart(app(ViperConfig::class)->pagesPath(), '')->replaceStart('/', '')->replaceEnd('.'.$extension, '');
+        $relativePath = str($this->option('filename'))
+            ->replaceStart(app(ViperConfig::class)->pagesPath(), '')
+            ->replaceStart('/', '')
+            ->replaceEnd('.' . $extension, '');
 
         $output = $compiler->compile();
 
         if ($this->option('write') === 'true') {
-            echo 'Compiled '.$relativePath;
+            echo 'Compiled ' . $relativePath;
             if ($this->option('transform') === 'true') {
                 Artisan::call('viper:generate');
             }

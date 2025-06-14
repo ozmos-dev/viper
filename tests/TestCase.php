@@ -16,7 +16,7 @@ class TestCase extends Orchestra
         parent::setUp();
 
         Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'Ozmos\\Viper\\Database\\Factories\\'.class_basename($modelName).'Factory'
+            fn(string $modelName) => 'Ozmos\\Viper\\Database\\Factories\\' . class_basename($modelName) . 'Factory',
         );
     }
 
@@ -32,21 +32,24 @@ class TestCase extends Orchestra
         config()->set('database.default', 'testing');
 
         /*
-         foreach (\Illuminate\Support\Facades\File::allFiles(__DIR__ . '/database/migrations') as $migration) {
-            (include $migration->getRealPath())->up();
-         }
+         * foreach (\Illuminate\Support\Facades\File::allFiles(__DIR__ . '/database/migrations') as $migration) {
+         * (include $migration->getRealPath())->up();
+         * }
          */
     }
 
     public function vueSfc()
     {
-        $stubPath = __DIR__.'/page-stubs';
-        $buildPath = __DIR__.'/build/'.str()->random(10);
-        $finder = Finder::create()->files()->in($stubPath)->name('*.php');
+        $stubPath = __DIR__ . '/page-stubs';
+        $buildPath = __DIR__ . '/build/' . str()->random(10);
+        $finder = Finder::create()
+            ->files()
+            ->in($stubPath)
+            ->name('*.php');
 
         File::ensureDirectoryExists($buildPath);
-        File::ensureDirectoryExists($buildPath.'/.viper');
-        File::ensureDirectoryExists($buildPath.'/pages');
+        File::ensureDirectoryExists($buildPath . '/.viper');
+        File::ensureDirectoryExists($buildPath . '/pages');
 
         $world = new World($buildPath);
 
@@ -58,17 +61,20 @@ class TestCase extends Orchestra
             $pageFilename =
                 // /Users/oz/code/viper/tests/page-stubs/(auth)/_layout.php
                 str($file->getRealPath())
-                // /(auth)/_layout.php
+                    // /(auth)/_layout.php
                     ->replaceStart($stubPath, '')
-                // /Users/oz/code/viper/tests/build/{str}/(auth)/_layout.php
-                    ->prepend($buildPath.'/pages')
+                    // /Users/oz/code/viper/tests/build/{str}/(auth)/_layout.php
+                    ->prepend($buildPath . '/pages')
                     ->replaceEnd('.php', '.vue');
 
             File::ensureDirectoryExists(dirname($pageFilename));
 
             File::put($pageFilename, $content);
 
-            (new Compiler(filename: $pageFilename, write: true))->compile();
+            (new Compiler(
+                filename: $pageFilename,
+                write: true,
+            ))->compile();
         }
 
         return $world;
