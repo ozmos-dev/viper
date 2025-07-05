@@ -4,12 +4,16 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { redirect } from "react-router";
 import { create } from "zustand";
 
-type BaseProps = Record<string, unknown>;
-type BaseActions = Record<string, { args: unknown; result: unknown }>;
+type BaseBindings = string[];
+type BaseProps = Record<string, { result: unknown; bindings: BaseBindings }>;
+type BaseActions = Record<
+  string,
+  { args: unknown; result: unknown; bindings: BaseBindings }
+>;
 type BaseParams = Record<string, string>;
 
 interface BasePageType {
@@ -28,6 +32,67 @@ interface PageInit {
   queryClient: QueryClient;
 }
 
+type HeaderFunction = () => Promise<Record<string, string>>;
+
+// Helper types for conditional binding requirements
+type BindOptions<T extends { bindings: BaseBindings }> =
+  T["bindings"]["length"] extends 0
+    ? { bind?: never }
+    : {
+        bind: {
+          [K in T["bindings"][number]]: string | number | null;
+        };
+      };
+
+// Type aliases for cleaner TanStack Query integration
+type QueryOptions<T> = Partial<Parameters<typeof useQuery<T>>[0]>;
+
+type MutationOptions<TResult, TArgs> = Parameters<
+  typeof useMutation<TResult, unknown, TArgs>
+>[0];
+
+// Clean parameter types for function signatures
+type UseQueryParams<T extends { bindings: BaseBindings; result: unknown }> =
+  T["bindings"]["length"] extends 0
+    ? [options?: QueryOptions<T["result"]> & BindOptions<T>]
+    : [options: QueryOptions<T["result"]> & BindOptions<T>];
+
+type UseMutationParams<
+  T extends { bindings: BaseBindings; result: unknown; args: unknown },
+> = T["bindings"]["length"] extends 0
+  ? [options?: MutationOptions<T["result"], T["args"]> & BindOptions<T>]
+  : [options: MutationOptions<T["result"], T["args"]> & BindOptions<T>];
+
+type UseFormParams<
+  T extends { bindings: BaseBindings; result: unknown; args: unknown },
+> = T["bindings"]["length"] extends 0
+  ? [
+      options?: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+      } & BindOptions<T>,
+    ]
+  : [
+      options: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+      } & BindOptions<T>,
+    ];
+
+type UseFormDataParams<
+  T extends { bindings: BaseBindings; result: unknown; args: unknown },
+> = T["bindings"]["length"] extends 0
+  ? [
+      options?: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+        files: string[];
+      } & BindOptions<T>,
+    ]
+  : [
+      options: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+        files: string[];
+      } & BindOptions<T>,
+    ];
+
 const usePageStore = create<{
   params: Record<string, string>;
 }>((set) => ({
@@ -40,6 +105,23 @@ export class Page {
   actions = {};
   hashes: Record<string, string> = {};
   queryClient: QueryClient | null = null;
+  headerFunctions: HeaderFunction[] = [];
+
+  mergeHeaders(func: HeaderFunction) {
+    this.headerFunctions.push(func);
+
+    return () => {
+      this.headerFunctions = this.headerFunctions.filter((f) => f !== func);
+    };
+  }
+
+  async getHeaders() {
+    const headers = await Promise.all(
+      this.headerFunctions.map((func) => func()),
+    );
+
+    return headers.reduce((acc, header) => ({ ...acc, ...header }), {});
+  }
 
   updateFromPageJson(json: BasePage) {
     this.props = json.props;
@@ -72,7 +154,7 @@ export function ViperProvider({
 
   useLayoutEffect(() => {
     const pageJson = JSON.parse(
-      document.getElementById("app")?.dataset.page ?? "{}"
+      document.getElementById("app")?.dataset.page ?? "{}",
     );
 
     page.updateFromPageJson(pageJson);
@@ -111,24 +193,77 @@ export function usePage<P extends BasePageType>() {
   type Params = P["params"];
   const params = usePageStore((state) => state.params);
 
+  async function viperFetch({
+    bind,
+    body,
+    headers,
+    method = "GET",
+  }: {
+    bind?: Record<string, unknown>;
+    body?: string | FormData;
+    headers?: Record<string, string>;
+    method?: string;
+  }) {
+    const boundHeaders: Record<string, string> = {};
+    const bindKeys = [];
+    const bindValues = [];
+    for (const [key, value] of Object.entries(bind ?? {})) {
+      if (value != null) {
+        bindKeys.push(key);
+        bindValues.push(String(value));
+      }
+    }
+    if (bindKeys.length > 0) {
+      boundHeaders["X-Viper-Bind-Keys"] = bindKeys.join(",");
+      boundHeaders["X-Viper-Bind-Values"] = bindValues.join(",");
+    }
+    return fetch(window.location.pathname, {
+      method,
+      credentials: "include",
+      headers: {
+        ...(await page.getHeaders()),
+        ...headers,
+        ...boundHeaders,
+        ...(body instanceof FormData
+          ? {}
+          : {
+              "Content-Type": "application/json",
+            }),
+        Accept: "application/json",
+        "X-Viper-Request": "true",
+        "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
+      },
+      body,
+    });
+  }
+
   return {
     setPageTitle: page.setPageTitle,
 
     params: params as Params,
 
-    useQuery<K extends keyof Props>(key: K) {
+    useQuery<K extends keyof Props>(key: K, ...args: UseQueryParams<Props[K]>) {
+      const options = args[0];
+      const { bind, ...opts } = options ?? {};
       const [enabled, setEnabled] = useState(false);
+      const queryKey = useMemo(() => {
+        return [
+          page.hashes[key as string],
+          ...Object.entries(bind ?? {})
+            .map(([key, value]) => `${key}:${value}`)
+            .filter(Boolean),
+        ];
+      }, [key, bind]);
 
-      const query = useQuery<Props[K]>({
+      const query = useQuery<Props[K]["result"]>({
+        ...opts,
         enabled,
-        initialData: () => page.props[key as string] as Props[K],
-        queryKey: [page.hashes[key as string]],
+        initialData: () => page.props[key as string] as Props[K]["result"],
+        queryKey,
         queryFn: async () => {
-          const res = await fetch(window.location.pathname, {
+          const res = await viperFetch({
+            bind,
             headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Only": key as string,
             },
           });
@@ -141,46 +276,45 @@ export function usePage<P extends BasePageType>() {
         },
       });
 
-      // for some reason data is always | null | undefined even when specifying initialData so this is a workaround
-      type IsAny<T> = 0 extends 1 & T ? true : false;
+      // Trust that initialData makes this non-null and preserve TanStack Query's return type
       return {
         ...query,
-        data: query.data as IsAny<Props[K]> extends true ? unknown : Props[K],
+        data: query.data as Props[K]["result"],
       };
     },
 
     useMutation<K extends keyof Actions>(
       key: K,
-      options: Parameters<
-        typeof useMutation<Actions[K]["result"], unknown, Actions[K]["args"]>
-      >[0] = {}
+      ...args: UseMutationParams<Actions[K]>
     ) {
+      const options = args[0] || { bind: {} };
       type Result = Actions[K]["result"];
       type Args = Actions[K]["args"];
+      const { bind, ...mutationOptions } = options;
 
       return useMutation<Result, unknown, Args>({
-        ...options,
+        ...mutationOptions,
         mutationFn: async (data = {}) => {
-          const res = await fetch(window.location.pathname, {
+          const res = await viperFetch({
             method: "POST",
-            credentials: "include",
-            body: JSON.stringify(data),
+            body: data instanceof FormData ? data : JSON.stringify(data),
             headers: {
+              ...(data instanceof FormData
+                ? {}
+                : { "Content-Type": "application/json" }),
               Accept: "application/json",
-              "Content-Type": "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Action": key as string,
-              "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
             },
+            bind,
           });
+          if (res.status === 422) {
+            const data = (await res.json()) as {
+              message: string;
+              errors: Record<string, string[]>;
+            };
+            throw data.errors;
+          }
           if (!res.ok) {
-            if (res.status === 422) {
-              const data = (await res.json()) as {
-                message: string;
-                errors: Record<string, string[]>;
-              };
-              throw data.errors;
-            }
             throw await res.json();
           }
           return (await res.json()) as Result;
@@ -190,57 +324,51 @@ export function usePage<P extends BasePageType>() {
 
     useForm<K extends keyof Actions>(
       key: K,
-      options: Parameters<
-        typeof useMutation<Actions[K]["result"], unknown, Actions[K]["args"]>
-      >[0] & {
-        state: Actions[K]["args"];
-      }
+      ...args: UseFormParams<Actions[K]>
     ) {
+      const options =
+        args[0] ||
+        ({} as MutationOptions<Actions[K]["result"], Actions[K]["args"]> & {
+          state: Actions[K]["args"];
+        } & BindOptions<Actions[K]>);
       type Result = Actions[K]["result"];
       type Args = Actions[K]["args"];
+      const { bind, state: initialState, ...mutationOptions } = options;
 
-      // @ts-expect-error
-      const _initialState = { ...options.state } as Args;
-      const [state, setState] = useState<Args>(_initialState as Args);
+      const _initialState = { ...(initialState ?? {}) } as Args;
+      const [state, setState] = useState<Args>(initialState ?? ({} as Args));
       const [errors, setErrors] = useState<Record<string, string>>({});
 
       const mutation = useMutation<Result, unknown, Args>({
-        ...options,
+        ...mutationOptions,
         mutationFn: async (data = {}) => {
           setErrors({});
 
-          const res = await fetch(window.location.pathname, {
+          const res = await viperFetch({
             method: "POST",
-            credentials: "include",
             body: JSON.stringify({
-              // @ts-expect-error
-              ...state,
-              // @ts-expect-error
-              ...data,
+              ...(state ?? {}),
+              ...(data ?? {}),
             }),
             headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Action": key as string,
-              "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
             },
+            bind,
           });
+          if (res.status === 422) {
+            const data = (await res.json()) as {
+              message: string;
+              errors: Record<string, string[]>;
+            };
+            setErrors(
+              Object.entries(data.errors).reduce(
+                (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
+                {},
+              ),
+            );
+            throw data.errors;
+          }
           if (!res.ok) {
-            if (res.status === 422) {
-              const data = (await res.json()) as {
-                message: string;
-                errors: Record<string, string[]>;
-              };
-              setErrors(
-                Object.entries(data.errors).reduce(
-                  // biome-ignore lint/performance/noAccumulatingSpread: it's fine here
-                  (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
-                  {}
-                )
-              );
-              throw data.errors;
-            }
             throw await res.json();
           }
           return (await res.json()) as Result;
@@ -256,8 +384,7 @@ export function usePage<P extends BasePageType>() {
           return mutation.mutateAsync(override);
         },
         reset: () => {
-          // @ts-expect-error
-          setState({ ..._initialState });
+          setState({ ...(_initialState ?? {}) } as Args);
         },
         errors,
         state,
@@ -266,74 +393,70 @@ export function usePage<P extends BasePageType>() {
     },
     useFormData<K extends keyof Actions>(
       key: K,
-      options: Parameters<
-        typeof useMutation<Actions[K]["result"], unknown, Actions[K]["args"]>
-      >[0] & {
-        state: Actions[K]["args"];
-        // todo: how can we auto detect this?
-        files: string[];
-      }
+      ...args: UseFormDataParams<Actions[K]>
     ) {
+      const options =
+        args[0] ||
+        ({} as MutationOptions<Actions[K]["result"], Actions[K]["args"]> & {
+          state: Actions[K]["args"];
+          files: string[];
+        } & BindOptions<Actions[K]>);
       type Result = Actions[K]["result"];
       type Args = Actions[K]["args"];
+      const { bind, state: initialState, files, ...mutationOptions } = options;
 
-      // @ts-expect-error
-      const _initialState = { ...options.state };
-      const [state, setState] = useState(_initialState);
+      const _initialState = { ...(initialState ?? {}) };
+      const [state, setState] = useState(initialState ?? ({} as Args));
       const [errors, setErrors] = useState<Record<string, string>>({});
 
       const mutation = useMutation<Result, unknown, Args>({
-        ...options,
+        ...mutationOptions,
         mutationFn: async (data = {}) => {
           setErrors({});
 
           const json = {
-            ...state,
-            // @ts-expect-error
-            ...data,
-          };
+            ...(state ?? {}),
+            ...(data ?? {}),
+          } as Record<string, unknown>;
 
           const formData = new FormData();
 
-          for (const key of options.files) {
+          for (const key of files) {
             if (Array.isArray(json[key])) {
-              for (const file of json[key]) {
-                formData.append(key, file);
+              for (const file of json[key] as File[]) {
+                formData.append(`${key}[]`, file);
               }
             } else if (json[key]) {
-              formData.set(key, json[key]);
+              formData.set(key, json[key] as string | File);
             }
             delete json[key];
           }
 
           formData.set("state", JSON.stringify(json));
 
-          const res = await fetch(window.location.pathname, {
+          const res = await viperFetch({
             method: "POST",
-            credentials: "include",
             body: formData,
             headers: {
-              Accept: "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Action": key as string,
-              "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
             },
+            bind,
           });
+
+          if (res.status === 422) {
+            const data = (await res.json()) as {
+              message: string;
+              errors: Record<string, string[]>;
+            };
+            setErrors(
+              Object.entries(data.errors).reduce(
+                (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
+                {},
+              ),
+            );
+            throw data.errors;
+          }
           if (!res.ok) {
-            if (res.status === 422) {
-              const data = (await res.json()) as {
-                message: string;
-                errors: Record<string, string[]>;
-              };
-              setErrors(
-                Object.entries(data.errors).reduce(
-                  // biome-ignore lint/performance/noAccumulatingSpread: it's fine here
-                  (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
-                  {}
-                )
-              );
-              throw data.errors;
-            }
             throw await res.json();
           }
           return (await res.json()) as Result;
@@ -349,10 +472,11 @@ export function usePage<P extends BasePageType>() {
           return mutation.mutateAsync(override);
         },
         reset: () => {
-          setState({ ..._initialState });
+          setState({ ..._initialState } as Args);
         },
         errors,
         state,
+        setState,
       };
     },
   };
