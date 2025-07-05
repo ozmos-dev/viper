@@ -45,6 +45,48 @@ type MutationOptions<TResult, TArgs> = Parameters<
   typeof useMutation<TResult, unknown, TArgs>
 >[0];
 
+// Clean parameter types for function signatures
+type UseQueryParams<T extends { bindings: BaseBindings; result: unknown }> =
+  T["bindings"]["length"] extends 0
+    ? [options?: QueryOptions<T["result"]> & BindOptions<T>]
+    : [options: QueryOptions<T["result"]> & BindOptions<T>];
+
+type UseMutationParams<
+  T extends { bindings: BaseBindings; result: unknown; args: unknown },
+> = T["bindings"]["length"] extends 0
+  ? [options?: MutationOptions<T["result"], T["args"]> & BindOptions<T>]
+  : [options: MutationOptions<T["result"], T["args"]> & BindOptions<T>];
+
+type UseFormParams<
+  T extends { bindings: BaseBindings; result: unknown; args: unknown },
+> = T["bindings"]["length"] extends 0
+  ? [
+      options?: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+      } & BindOptions<T>,
+    ]
+  : [
+      options: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+      } & BindOptions<T>,
+    ];
+
+type UseFormDataParams<
+  T extends { bindings: BaseBindings; result: unknown; args: unknown },
+> = T["bindings"]["length"] extends 0
+  ? [
+      options?: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+        files: string[];
+      } & BindOptions<T>,
+    ]
+  : [
+      options: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+        files: string[];
+      } & BindOptions<T>,
+    ];
+
 export class Page {
   params = ref<Record<string, string>>({});
   formatTitle = (title: string) => title;
@@ -150,12 +192,7 @@ export function usePage<P extends BasePageType>() {
 
     params: page.params as Ref<Params>,
 
-    useQuery<K extends keyof Props>(
-      key: K,
-      ...args: Props[K]["bindings"]["length"] extends 0
-        ? [options?: QueryOptions<Props[K]["result"]> & BindOptions<Props[K]>]
-        : [options: QueryOptions<Props[K]["result"]> & BindOptions<Props[K]>]
-    ) {
+    useQuery<K extends keyof Props>(key: K, ...args: UseQueryParams<Props[K]>) {
       const options = args[0];
       const { bind, ...opts } = options ?? {};
       const enabled = ref(false);
@@ -198,18 +235,7 @@ export function usePage<P extends BasePageType>() {
 
     useMutation<K extends keyof Actions>(
       key: K,
-      ...args: Actions[K]["bindings"]["length"] extends 0
-        ? [
-            options?: MutationOptions<
-              Actions[K]["result"],
-              Actions[K]["args"]
-            > &
-              BindOptions<Actions[K]>,
-          ]
-        : [
-            options: MutationOptions<Actions[K]["result"], Actions[K]["args"]> &
-              BindOptions<Actions[K]>,
-          ]
+      ...args: UseMutationParams<Actions[K]>
     ) {
       const options = args[0] || { bind: {} };
       type Result = Actions[K]["result"];
@@ -247,19 +273,7 @@ export function usePage<P extends BasePageType>() {
 
     useForm<K extends keyof Actions>(
       key: K,
-      ...args: Actions[K]["bindings"]["length"] extends 0
-        ? [
-            options?: MutationOptions<
-              Actions[K]["result"],
-              Actions[K]["args"]
-            > & { state: Actions[K]["args"] } & BindOptions<Actions[K]>,
-          ]
-        : [
-            options: MutationOptions<
-              Actions[K]["result"],
-              Actions[K]["args"]
-            > & { state: Actions[K]["args"] } & BindOptions<Actions[K]>,
-          ]
+      ...args: UseFormParams<Actions[K]>
     ) {
       const options =
         args[0] ||
@@ -324,23 +338,7 @@ export function usePage<P extends BasePageType>() {
     },
     useFormData<K extends keyof Actions>(
       key: K,
-      ...args: Actions[K]["bindings"]["length"] extends 0
-        ? [
-            options?: MutationOptions<
-              Actions[K]["result"],
-              Actions[K]["args"]
-            > & { state: Actions[K]["args"]; files: string[] } & BindOptions<
-                Actions[K]
-              >,
-          ]
-        : [
-            options: MutationOptions<
-              Actions[K]["result"],
-              Actions[K]["args"]
-            > & { state: Actions[K]["args"]; files: string[] } & BindOptions<
-                Actions[K]
-              >,
-          ]
+      ...args: UseFormDataParams<Actions[K]>
     ) {
       const options =
         args[0] ||

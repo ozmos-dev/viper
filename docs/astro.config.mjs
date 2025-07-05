@@ -40,6 +40,7 @@ export default defineConfig({
             { label: "Routing", link: "/guides/routing" },
             { label: "Props / Queries", link: "/guides/props" },
             { label: "Actions / Forms", link: "/guides/actions" },
+            { label: "Model / Container Injection", link: "/guides/binding" },
             { label: "TypeScript", link: "/guides/typescript" },
             { label: "Code Editors", link: "/guides/editors" },
           ],

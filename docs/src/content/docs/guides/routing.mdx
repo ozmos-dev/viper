@@ -5,7 +5,7 @@ import {Aside, FileTree} from "@astrojs/starlight/components";
 import FrameworkTabs from '../../../components/framework-tabs.astro'
 import FrameworkTabsCode from '../../../components/framework-tabs-code.astro'
 
-Routes are registered both server side in Laravel and client side in your frameworks respective router ([react-router](https://reactrouter.com)/[vue-router](https://router.vuejs.org)). 
+Routes are registered both server side in Laravel and client side in your frameworks respective router ([react-router](https://reactrouter.com)/[vue-router](https://router.vuejs.org)).
 
 You can follow their respective documentations for more specific details on navigating your app. This page covers the Viper specific things you should know.
 
@@ -202,68 +202,7 @@ return new class {
 
 ### Route model binding
 
-<FrameworkTabsCode 
-  filename="posts/[post]"
-  vue={`
-<template>
-   <h1>Post {{ post.title }}</h1>
-</template>
-
-<script setup lang="ts">
-import { usePage } from '@ozmos/viper-vue';
-
-const page = usePage<ViperGen.PostsIdParam>();
-const { data: post } = page.useQuery('post');
-</script>
-`}
-  react={`
-import { usePage } from '@ozmos/viper-react';
-
-export default function Post() {
-   const page = usePage<ViperGen.PostsIdParam>();
-   const { data: post } = page.useQuery('post');
-
-   return <h1>Post {post.title}</h1>;
-}
-`}
-  php={`
-return new class {
-   #[\\Ozmos\\Viper\\Attrs\\Prop]
-   public function post(\\App\\Models\\Post $post)
-   {
-     return $post;
-   }
-};
-`}
-/>
-
-You can configure model binding in your `AppServiceProvider`
-
-```php
-// app/Providers/AppServiceProvider.php
-
-<?php
-
-namespace App\Providers;
-
-use Illuminate\Support\ServiceProvider;
-use Ozmos\Viper\Facades\Viper;
-
-class AppServiceProvider extends ServiceProvider
-{
-  public function boot(): void
-  {
-    // this is the default -> enabled and looks for models in "\\App\\Models"
-    Viper::autoDiscoverModels();
-
-    // you can also configure a custom namespace to look in
-    Viper::autoDiscoverModels("\\App\\V2\\Models");
-
-    // or disable model discovery completely
-    Viper::autoDiscoverModels(false);
-  }
-}
-```
+See the [Model / Container Injection](./binding) documentation.
 
 ### Wildcard Routes
 
@@ -341,7 +280,7 @@ Any props, actions, middleware, names, etc provided via a layout are passed down
 
 Route groups are directories wrapped with parenthesis e.g. `(auth)` and do not reflect in the final url.
 
-This is useful for providing shared layouts without affecting the url. 
+This is useful for providing shared layouts without affecting the url.
 
 For example:
 

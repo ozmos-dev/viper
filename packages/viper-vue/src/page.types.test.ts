@@ -67,6 +67,13 @@ expectType<number>(scalarQuery.data.value);
 const objectQuery = page.useQuery("objectProp");
 expectType<{ id: number }>(objectQuery.data.value);
 
+page.useQuery("scalarProp", {
+  // @ts-expect-error - binding provided to query that doesnt need bindings
+  bind: {
+    something: 1,
+  },
+});
+
 // @ts-expect-error - binding not provided
 page.useQuery("bindingProp");
 
