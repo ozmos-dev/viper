@@ -2,10 +2,12 @@
   "name": "@ozmos/vite-plugin-viper",
   "description": "Vite plugin for Viper",
   "private": false,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "main": "./src/index.js",
   "type": "module",
-  "scripts": {},
+  "scripts": {
+    "release": "npm publish --access public"
+  },
   "keywords": ["laravel", "vue", "viper"],
   "author": "ozmos",
   "license": "MIT",

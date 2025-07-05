@@ -22,6 +22,9 @@
       "recommended": true,
       "suspicious": {
         "noExplicitAny": "warn"
+      },
+      "performance": {
+        "noAccumulatingSpread": "warn"
       }
     }
   },

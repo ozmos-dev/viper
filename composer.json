@@ -17,6 +17,7 @@
     "nikic/php-parser": "^5.4",
     "spatie/laravel-data": "^4.15",
     "spatie/laravel-package-tools": "^1.16",
+    "spatie/laravel-ray": "^1.40",
     "spatie/typescript-transformer": "^2.5"
   },
   "require-dev": {
