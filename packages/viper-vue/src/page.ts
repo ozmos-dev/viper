@@ -28,6 +28,23 @@ interface PageInit {
 
 type HeaderFunction = () => Promise<Record<string, string>>;
 
+// Helper types for conditional binding requirements
+type HasBindings<T extends { bindings: BaseBindings }> =
+  T["bindings"] extends readonly []
+    ? false
+    : T["bindings"] extends readonly [any, ...any[]]
+      ? true
+      : false;
+
+type BindingMap<T extends { bindings: BaseBindings }> = {
+  [K in T["bindings"][number]]: MaybeRef<string | number | null>;
+};
+
+type ConditionalBindOptions<T extends { bindings: BaseBindings }> =
+  HasBindings<T> extends true
+    ? { bind: BindingMap<T> }
+    : { bind?: BindingMap<T> };
+
 export class Page {
   params = ref<Record<string, string>>({});
   formatTitle = (title: string) => title;
@@ -84,6 +101,50 @@ export function usePage<P extends BasePageType>() {
   const page = inject("viperPage") as Page;
   const router = useRouter();
 
+  async function viperFetch({
+    bind,
+    body,
+    headers,
+    method = "GET",
+  }: {
+    bind?: Record<string, unknown>;
+    body?: string | FormData;
+    headers?: Record<string, string>;
+    method?: string;
+  }) {
+    const boundHeaders: Record<string, string> = {};
+    const bindKeys = [];
+    const bindValues = [];
+    for (const [key, value] of Object.entries(bind ?? {})) {
+      if (toValue(value)) {
+        bindKeys.push(key);
+        bindValues.push(toValue(value));
+      }
+    }
+    if (bindKeys.length > 0) {
+      boundHeaders["X-Viper-Bind-Keys"] = bindKeys.join(",");
+      boundHeaders["X-Viper-Bind-Values"] = bindValues.join(",");
+    }
+    return fetch(router.currentRoute.value.fullPath, {
+      method,
+      credentials: "include",
+      headers: {
+        ...(await page.getHeaders()),
+        ...headers,
+        ...boundHeaders,
+        ...(body instanceof FormData
+          ? {}
+          : {
+              "Content-Type": "application/json",
+            }),
+        Accept: "application/json",
+        "X-Viper-Request": "true",
+        "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
+      },
+      body,
+    });
+  }
+
   return {
     setPageTitle: page.setPageTitle,
 
@@ -91,20 +152,10 @@ export function usePage<P extends BasePageType>() {
 
     useQuery<K extends keyof Props>(
       key: K,
-      {
-        bind,
-        ...opts
-      }: Omit<
-        Parameters<typeof useQuery<Props[K]["result"]>>[0],
-        "queryFn" | "queryKey" | "initialData" | "enabled"
-      > & {
-        bind?: {
-          [key in Props[K]["bindings"][number]]: MaybeRef<
-            string | number | null
-          >;
-        };
-      } = {},
+      options?: Partial<Parameters<typeof useQuery<Props[K]["result"]>>[0]> &
+        ConditionalBindOptions<Props[K]>,
     ) {
+      const { bind, ...opts } = options ?? {};
       const enabled = ref(false);
       const queryKey = computed(() => {
         return [
@@ -121,27 +172,9 @@ export function usePage<P extends BasePageType>() {
         initialData: () => page.props[key as string] as Props[K]["result"],
         queryKey,
         queryFn: async () => {
-          const headers = await page.getHeaders();
-          const boundHeaders: Record<string, string> = {};
-          const bindKeys = [];
-          const bindValues = [];
-          for (const [key, value] of Object.entries(bind ?? {})) {
-            if (toValue(value)) {
-              bindKeys.push(key);
-              bindValues.push(toValue(value));
-            }
-          }
-          if (bindKeys.length > 0) {
-            boundHeaders["X-Viper-Bind-Keys"] = bindKeys.join(",");
-            boundHeaders["X-Viper-Bind-Values"] = bindValues.join(",");
-          }
-          const res = await fetch(router.currentRoute.value.fullPath, {
+          const res = await viperFetch({
+            bind,
             headers: {
-              ...headers,
-              ...boundHeaders,
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Only": key as string,
             },
           });
@@ -171,13 +204,8 @@ export function usePage<P extends BasePageType>() {
         ...options
       }: Parameters<
         typeof useMutation<Actions[K]["result"], unknown, Actions[K]["args"]>
-      >[0] & {
-        bind?: {
-          [key in Actions[K]["bindings"][number]]: MaybeRef<
-            string | number | null
-          >;
-        };
-      } = {},
+      >[0] &
+        ConditionalBindOptions<Actions[K]> = {} as any,
     ) {
       type Result = Actions[K]["result"];
       type Args = Actions[K]["args"];
@@ -185,45 +213,25 @@ export function usePage<P extends BasePageType>() {
       return useMutation<Result, unknown, Args>({
         ...options,
         mutationFn: async (data = {}) => {
-          const headers = await page.getHeaders();
-          const boundHeaders: Record<string, string> = {};
-          const bindKeys = [];
-          const bindValues = [];
-          for (const [key, value] of Object.entries(bind ?? {})) {
-            if (toValue(value)) {
-              bindKeys.push(key);
-              bindValues.push(toValue(value));
-            }
-          }
-          if (bindKeys.length > 0) {
-            boundHeaders["X-Viper-Bind-Keys"] = bindKeys.join(",");
-            boundHeaders["X-Viper-Bind-Values"] = bindValues.join(",");
-          }
-
-          const res = await fetch(router.currentRoute.value.fullPath, {
+          const res = await viperFetch({
             method: "POST",
-            credentials: "include",
             body: data instanceof FormData ? data : JSON.stringify(data),
             headers: {
-              ...headers,
-              ...boundHeaders,
               ...(data instanceof FormData
                 ? {}
                 : { "Content-Type": "application/json" }),
               Accept: "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Action": key as string,
-              "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
             },
           });
+          if (res.status === 422) {
+            const data = (await res.json()) as {
+              message: string;
+              errors: Record<string, string[]>;
+            };
+            throw data.errors;
+          }
           if (!res.ok) {
-            if (res.status === 422) {
-              const data = (await res.json()) as {
-                message: string;
-                errors: Record<string, string[]>;
-              };
-              throw data.errors;
-            }
             throw await res.json();
           }
           return (await res.json()) as Result;
@@ -240,12 +248,7 @@ export function usePage<P extends BasePageType>() {
         typeof useMutation<Actions[K]["result"], unknown, Actions[K]["args"]>
       >[0] & {
         state: Actions[K]["args"];
-        bind?: {
-          [key in Actions[K]["bindings"][number]]: MaybeRef<
-            string | number | null
-          >;
-        };
-      },
+      } & ConditionalBindOptions<Actions[K]>,
     ) {
       type Result = Actions[K]["result"];
       type Args = Actions[K]["args"];
@@ -259,50 +262,28 @@ export function usePage<P extends BasePageType>() {
         mutationFn: async (data = {}) => {
           errors.value = {};
 
-          const headers = await page.getHeaders();
-          const boundHeaders: Record<string, string> = {};
-          const bindKeys = [];
-          const bindValues = [];
-          for (const [key, value] of Object.entries(bind ?? {})) {
-            if (toValue(value)) {
-              bindKeys.push(key);
-              bindValues.push(toValue(value));
-            }
-          }
-          if (bindKeys.length > 0) {
-            boundHeaders["X-Viper-Bind-Keys"] = bindKeys.join(",");
-            boundHeaders["X-Viper-Bind-Values"] = bindValues.join(",");
-          }
-
-          const res = await fetch(router.currentRoute.value.fullPath, {
+          const res = await viperFetch({
             method: "POST",
-            credentials: "include",
             body: JSON.stringify({
               ...toValue(state),
               ...toValue(data ?? {}),
             }),
             headers: {
-              ...headers,
-              ...boundHeaders,
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Action": key as string,
-              "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
             },
           });
+          if (res.status === 422) {
+            const data = (await res.json()) as {
+              message: string;
+              errors: Record<string, string[]>;
+            };
+            errors.value = Object.entries(data.errors).reduce(
+              (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
+              {},
+            );
+            throw data.errors;
+          }
           if (!res.ok) {
-            if (res.status === 422) {
-              const data = (await res.json()) as {
-                message: string;
-                errors: Record<string, string[]>;
-              };
-              errors.value = Object.entries(data.errors).reduce(
-                (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
-                {},
-              );
-              throw data.errors;
-            }
             throw await res.json();
           }
           return (await res.json()) as Result;
@@ -335,12 +316,7 @@ export function usePage<P extends BasePageType>() {
         state: Actions[K]["args"];
         // todo: how can we auto detect this?
         files: string[];
-        bind?: {
-          [key in Actions[K]["bindings"][number]]: MaybeRef<
-            string | number | null
-          >;
-        };
-      },
+      } & ConditionalBindOptions<Actions[K]>,
     ) {
       type Result = Actions[K]["result"];
       type Args = Actions[K]["args"];
@@ -374,46 +350,26 @@ export function usePage<P extends BasePageType>() {
 
           formData.set("state", JSON.stringify(json));
 
-          const headers = await page.getHeaders();
-          const boundHeaders: Record<string, string> = {};
-          const bindKeys = [];
-          const bindValues = [];
-          for (const [key, value] of Object.entries(bind ?? {})) {
-            if (toValue(value)) {
-              bindKeys.push(key);
-              bindValues.push(toValue(value));
-            }
-          }
-          if (bindKeys.length > 0) {
-            boundHeaders["X-Viper-Bind-Keys"] = bindKeys.join(",");
-            boundHeaders["X-Viper-Bind-Values"] = bindValues.join(",");
-          }
-
-          const res = await fetch(router.currentRoute.value.fullPath, {
+          const res = await viperFetch({
             method: "POST",
-            credentials: "include",
             body: formData,
             headers: {
-              ...headers,
-              ...boundHeaders,
-              Accept: "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Action": key as string,
-              "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
             },
           });
+
+          if (res.status === 422) {
+            const data = (await res.json()) as {
+              message: string;
+              errors: Record<string, string[]>;
+            };
+            errors.value = Object.entries(data.errors).reduce(
+              (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
+              {},
+            );
+            throw data.errors;
+          }
           if (!res.ok) {
-            if (res.status === 422) {
-              const data = (await res.json()) as {
-                message: string;
-                errors: Record<string, string[]>;
-              };
-              errors.value = Object.entries(data.errors).reduce(
-                (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
-                {},
-              );
-              throw data.errors;
-            }
             throw await res.json();
           }
           return (await res.json()) as Result;
