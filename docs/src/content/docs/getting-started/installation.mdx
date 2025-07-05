@@ -145,6 +145,22 @@ Publish the viper config:
 php artisan vendor:publish --tag="viper-config"
 ```
 
+Update your config to have the proper mode and framework:
+
+```php
+// config/viper.php
+
+return [
+  // vue | react
+  'framework' => 'vue',
+  'output_path' => base_path('.viper'),
+  'pages_path' => resource_path('js/pages'),
+  // sfc -> <php> tag inside vue files
+  // adjacent -> php files directly next to vue files ie js/pages/login.vue and js/pages/login.php
+  'mode' => 'adjacent',
+];
+```
+
 ### Frontend
 
 Install the required npm packages

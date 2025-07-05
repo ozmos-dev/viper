@@ -36,6 +36,10 @@ class Viper
             return null;
         }
 
+        if (class_exists($className)) {
+            return $className;
+        }
+
         return $this->modelPath . '\\' . $className;
     }
 
