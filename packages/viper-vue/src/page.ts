@@ -29,21 +29,21 @@ interface PageInit {
 type HeaderFunction = () => Promise<Record<string, string>>;
 
 // Helper types for conditional binding requirements
-type HasBindings<T extends { bindings: BaseBindings }> =
-  T["bindings"] extends readonly []
-    ? false
-    : T["bindings"] extends readonly [any, ...any[]]
-      ? true
-      : false;
+type BindOptions<T extends { bindings: BaseBindings }> =
+  T["bindings"]["length"] extends 0
+    ? { bind?: never }
+    : {
+        bind: {
+          [K in T["bindings"][number]]: MaybeRef<string | number | null>;
+        };
+      };
 
-type BindingMap<T extends { bindings: BaseBindings }> = {
-  [K in T["bindings"][number]]: MaybeRef<string | number | null>;
-};
+// Type aliases for cleaner TanStack Query integration
+type QueryOptions<T> = Partial<Parameters<typeof useQuery<T>>[0]>;
 
-type ConditionalBindOptions<T extends { bindings: BaseBindings }> =
-  HasBindings<T> extends true
-    ? { bind: BindingMap<T> }
-    : { bind?: BindingMap<T> };
+type MutationOptions<TResult, TArgs> = Parameters<
+  typeof useMutation<TResult, unknown, TArgs>
+>[0];
 
 export class Page {
   params = ref<Record<string, string>>({});
@@ -152,9 +152,11 @@ export function usePage<P extends BasePageType>() {
 
     useQuery<K extends keyof Props>(
       key: K,
-      options?: Partial<Parameters<typeof useQuery<Props[K]["result"]>>[0]> &
-        ConditionalBindOptions<Props[K]>,
+      ...args: Props[K]["bindings"]["length"] extends 0
+        ? [options?: QueryOptions<Props[K]["result"]> & BindOptions<Props[K]>]
+        : [options: QueryOptions<Props[K]["result"]> & BindOptions<Props[K]>]
     ) {
+      const options = args[0];
       const { bind, ...opts } = options ?? {};
       const enabled = ref(false);
       const queryKey = computed(() => {
@@ -187,31 +189,35 @@ export function usePage<P extends BasePageType>() {
         },
       });
 
-      // for some reason data is always | null | undefined even when specifying initialData so this is a workaround
-      type IsAny<T> = 0 extends 1 & T ? true : false;
+      // Trust that initialData makes this non-null and preserve TanStack Query's return type
       return {
         ...query,
-        data: query.data as IsAny<Props[K]["result"]> extends true
-          ? any
-          : Ref<Readonly<Props[K]["result"]>>,
+        data: query.data as Ref<Props[K]["result"]>,
       };
     },
 
     useMutation<K extends keyof Actions>(
       key: K,
-      {
-        bind,
-        ...options
-      }: Parameters<
-        typeof useMutation<Actions[K]["result"], unknown, Actions[K]["args"]>
-      >[0] &
-        ConditionalBindOptions<Actions[K]> = {} as any,
+      ...args: Actions[K]["bindings"]["length"] extends 0
+        ? [
+            options?: MutationOptions<
+              Actions[K]["result"],
+              Actions[K]["args"]
+            > &
+              BindOptions<Actions[K]>,
+          ]
+        : [
+            options: MutationOptions<Actions[K]["result"], Actions[K]["args"]> &
+              BindOptions<Actions[K]>,
+          ]
     ) {
+      const options = args[0] || { bind: {} };
       type Result = Actions[K]["result"];
       type Args = Actions[K]["args"];
+      const { bind, ...mutationOptions } = options;
 
       return useMutation<Result, unknown, Args>({
-        ...options,
+        ...mutationOptions,
         mutationFn: async (data = {}) => {
           const res = await viperFetch({
             method: "POST",
@@ -241,24 +247,35 @@ export function usePage<P extends BasePageType>() {
 
     useForm<K extends keyof Actions>(
       key: K,
-      {
-        bind,
-        ...options
-      }: Parameters<
-        typeof useMutation<Actions[K]["result"], unknown, Actions[K]["args"]>
-      >[0] & {
-        state: Actions[K]["args"];
-      } & ConditionalBindOptions<Actions[K]>,
+      ...args: Actions[K]["bindings"]["length"] extends 0
+        ? [
+            options?: MutationOptions<
+              Actions[K]["result"],
+              Actions[K]["args"]
+            > & { state: Actions[K]["args"] } & BindOptions<Actions[K]>,
+          ]
+        : [
+            options: MutationOptions<
+              Actions[K]["result"],
+              Actions[K]["args"]
+            > & { state: Actions[K]["args"] } & BindOptions<Actions[K]>,
+          ]
     ) {
+      const options =
+        args[0] ||
+        ({} as MutationOptions<Actions[K]["result"], Actions[K]["args"]> & {
+          state: Actions[K]["args"];
+        } & BindOptions<Actions[K]>);
       type Result = Actions[K]["result"];
       type Args = Actions[K]["args"];
+      const { bind, state: initialState, ...mutationOptions } = options;
 
-      const _initialState = { ...toValue(options.state ?? {}) };
-      const state = ref(options.state);
+      const _initialState = { ...toValue(initialState ?? {}) };
+      const state = ref(initialState);
       const errors = ref<Record<string, string>>({});
 
       const mutation = useMutation<Result, unknown, Args>({
-        ...options,
+        ...mutationOptions,
         mutationFn: async (data = {}) => {
           errors.value = {};
 
@@ -307,26 +324,40 @@ export function usePage<P extends BasePageType>() {
     },
     useFormData<K extends keyof Actions>(
       key: K,
-      {
-        bind,
-        ...options
-      }: Parameters<
-        typeof useMutation<Actions[K]["result"], unknown, Actions[K]["args"]>
-      >[0] & {
-        state: Actions[K]["args"];
-        // todo: how can we auto detect this?
-        files: string[];
-      } & ConditionalBindOptions<Actions[K]>,
+      ...args: Actions[K]["bindings"]["length"] extends 0
+        ? [
+            options?: MutationOptions<
+              Actions[K]["result"],
+              Actions[K]["args"]
+            > & { state: Actions[K]["args"]; files: string[] } & BindOptions<
+                Actions[K]
+              >,
+          ]
+        : [
+            options: MutationOptions<
+              Actions[K]["result"],
+              Actions[K]["args"]
+            > & { state: Actions[K]["args"]; files: string[] } & BindOptions<
+                Actions[K]
+              >,
+          ]
     ) {
+      const options =
+        args[0] ||
+        ({} as MutationOptions<Actions[K]["result"], Actions[K]["args"]> & {
+          state: Actions[K]["args"];
+          files: string[];
+        } & BindOptions<Actions[K]>);
       type Result = Actions[K]["result"];
       type Args = Actions[K]["args"];
+      const { bind, state: initialState, files, ...mutationOptions } = options;
 
-      const _initialState = { ...toValue(options.state ?? {}) };
-      const state = ref(options.state);
+      const _initialState = { ...toValue(initialState ?? {}) };
+      const state = ref(initialState);
       const errors = ref<Record<string, string>>({});
 
       const mutation = useMutation<Result, unknown, Args>({
-        ...options,
+        ...mutationOptions,
         mutationFn: async (data = {}) => {
           errors.value = {};
 
@@ -337,7 +368,7 @@ export function usePage<P extends BasePageType>() {
 
           const formData = new FormData();
 
-          for (const key of options.files) {
+          for (const key of files) {
             if (Array.isArray(json[key])) {
               for (const file of json[key]) {
                 formData.append(`${key}[]`, file);

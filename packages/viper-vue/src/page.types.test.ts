@@ -1,5 +1,4 @@
 import { expectType } from "tsd";
-import { type Ref, ref } from "vue";
 import { usePage } from "./page";
 
 type PageTest = {
@@ -52,7 +51,9 @@ type PageTest = {
       bindings: ["something"];
     };
   };
-  params: {};
+  params: {
+    something: string;
+  };
 };
 
 const page = usePage<PageTest>();
@@ -92,14 +93,14 @@ anyQuery.data.value.something.other;
 // no types provided so we can pass anything to mutate and data
 const noTypeMutation = page.useMutation("noTypes", {
   onSuccess(data) {
-    console.log(data.something.other);
+    void data.something.other;
   },
 });
 noTypeMutation.mutate({ whatever: true });
 
 const argOnlyMutation = page.useMutation("argOnly", {
   onSuccess(data) {
-    console.log(data.is.untyped);
+    void data.is.untyped;
   },
 });
 // @ts-expect-error - wrong key provided
@@ -111,20 +112,20 @@ argOnlyMutation.mutate({ id: 1 });
 const resultOnlyMutation = page.useMutation("resultOnly", {
   onSuccess(data) {
     // @ts-expect-error cannot access properties that dont exist on the result type
-    console.log(data.is.typed);
+    void data.is.typed;
 
     // actual type works without errors
-    console.log(data.id);
+    void data.id;
   },
 });
 
 const argsAndResult = page.useMutation("argsAndResult", {
   onSuccess(data) {
     // @ts-expect-error cannot access properties that dont exist on the result type
-    console.log(data.is.typed);
+    void data.is.typed;
 
     // actual type works without errors
-    console.log(data.two);
+    void data.two;
   },
 });
 
@@ -150,3 +151,8 @@ page.useMutation("bindings", {
     something: 1,
   },
 });
+
+// @ts-expect-error - param key doesnt exist
+void page.params.value.other;
+
+expectType<string>(page.params.value.something);
