@@ -416,10 +416,10 @@ export function usePage<P extends BasePageType>() {
 
       return {
         ...mutation,
-        mutate(override: Args = {}) {
+        mutate(override: Partial<Args> = {}) {
           return mutation.mutate(override);
         },
-        mutateAsync(override: Args = {}) {
+        mutateAsync(override: Partial<Args> = {}) {
           return mutation.mutateAsync(override);
         },
         reset: () => {
@@ -504,10 +504,10 @@ export function usePage<P extends BasePageType>() {
 
       return {
         ...mutation,
-        mutate(override: Args = {}) {
+        mutate(override: Partial<Args> = {}) {
           return mutation.mutate(override);
         },
-        mutateAsync(override: Args = {}) {
+        mutateAsync(override: Partial<Args> = {}) {
           return mutation.mutateAsync(override);
         },
         reset: () => {

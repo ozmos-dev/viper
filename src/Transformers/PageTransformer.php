@@ -83,10 +83,19 @@ class PageTransformer implements Transformer
         $returnType = $this->reflectionToTypeScript($method, $missingSymbols);
 
         $argType = 'any';
+          $bindings = [];
+
         foreach ($method->getparameters() as $parameter) {
             if ($parameter->getType()->isBuiltin()) {
                 continue;
             }
+
+            $attrs = $parameter->getAttributes(Bind::class);
+
+            if (!empty($attrs)) {
+              $bindings[] = $parameter->getName();
+            }
+
             $classReflect = new \ReflectionClass($parameter->getType()->getName());
             if ($classReflect->isSubclassOf('\\Spatie\\LaravelData\\Data')) {
                 $argType = $missingSymbols->add($classReflect->getName());
@@ -95,6 +104,8 @@ class PageTransformer implements Transformer
             }
         }
 
-        return "{$method->getName()}: { args: {$argType}, result: {$returnType} }";
+      $bindingType = json_encode($bindings);
+
+        return "{$method->getName()}: { args: {$argType}; result: {$returnType}; bindings: $bindingType; }";
     }
 }

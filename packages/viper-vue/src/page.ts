@@ -1,5 +1,13 @@
 import { type QueryClient, useMutation, useQuery } from "@tanstack/vue-query";
-import { type MaybeRef, type Ref, computed, inject, ref, toValue } from "vue";
+import {
+  type ComputedRef,
+  type MaybeRef,
+  type Ref,
+  computed,
+  inject,
+  ref,
+  toValue,
+} from "vue";
 import { useRouter } from "vue-router";
 
 type BaseBindings = string[];
@@ -34,7 +42,9 @@ type BindOptions<T extends { bindings: BaseBindings }> =
     ? { bind?: never }
     : {
         bind: {
-          [K in T["bindings"][number]]: MaybeRef<string | number | null>;
+          [K in T["bindings"][number]]:
+            | MaybeRef<string | number | null>
+            | ComputedRef<string | number | null>;
         };
       };
 
@@ -247,6 +257,7 @@ export function usePage<P extends BasePageType>() {
         mutationFn: async (data = {}) => {
           const res = await viperFetch({
             method: "POST",
+            bind,
             body: data instanceof FormData ? data : JSON.stringify(data),
             headers: {
               ...(data instanceof FormData
@@ -295,6 +306,7 @@ export function usePage<P extends BasePageType>() {
 
           const res = await viperFetch({
             method: "POST",
+            bind,
             body: JSON.stringify({
               ...toValue(state),
               ...toValue(data ?? {}),
@@ -323,10 +335,10 @@ export function usePage<P extends BasePageType>() {
 
       return {
         ...mutation,
-        mutate(override: Args = {}) {
+        mutate(override: Partial<Args> = {}) {
           return mutation.mutate(override);
         },
-        mutateAsync(override: Args = {}) {
+        mutateAsync(override: Partial<Args> = {}) {
           return mutation.mutateAsync(override);
         },
         reset: () => {
@@ -382,6 +394,7 @@ export function usePage<P extends BasePageType>() {
           const res = await viperFetch({
             method: "POST",
             body: formData,
+            bind,
             headers: {
               "X-Viper-Action": key as string,
             },
@@ -407,10 +420,10 @@ export function usePage<P extends BasePageType>() {
 
       return {
         ...mutation,
-        mutate(override: Args = {}) {
+        mutate(override: Partial<Args> = {}) {
           return mutation.mutate(override);
         },
-        mutateAsync(override: Args = {}) {
+        mutateAsync(override: Partial<Args> = {}) {
           return mutation.mutateAsync(override);
         },
         reset: () => {

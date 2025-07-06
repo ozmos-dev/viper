@@ -45,6 +45,11 @@ type PageTest = {
       result: { two: number };
       bindings: [];
     };
+    multipleArgs: {
+      args: { one: number; two: number };
+      result: any;
+      bindings: [];
+    };
     bindings: {
       args: any;
       result: any;
@@ -163,3 +168,27 @@ page.useMutation("bindings", {
 void page.params.value.other;
 
 expectType<string>(page.params.value.something);
+
+const multipleArgsMutation = page.useMutation("multipleArgs");
+
+// @ts-expect-error - no args passed
+multipleArgsMutation.mutate();
+
+// @ts-expect-error - only 1 args passed
+multipleArgsMutation.mutate({ one: 1 });
+
+// works fine both args passed
+multipleArgsMutation.mutate({ one: 1, two: 2 });
+
+const multipleArgsForm = page.useForm("multipleArgs", {
+  state: {
+    one: 1,
+    two: 2,
+  },
+});
+
+// works fine without args because it will use the state provided
+multipleArgsForm.mutate();
+
+// allows overriding only a single field
+multipleArgsForm.mutate({ one: 1 });

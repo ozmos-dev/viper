@@ -237,6 +237,56 @@ return new class {
 };
 ```
 
+### Props and Actions with Bind Attribute
+
+The `#[Bind]` attribute allows you to inject models that aren't reflected in the URL, useful for modals or dynamic content. This works for both Props and Actions.
+
+```vue
+<script setup lang="ts">
+const page = usePage<ViperGen.AdminUsers>();
+
+const selectedUserId = ref(1);
+
+const { data: user } = page.useQuery('user', {
+  bind: {
+    user: selectedUserId,
+  },
+});
+
+const { mutate: updateUser } = page.useMutation('updateUser', {
+  bind: {
+    user: selectedUserId,
+  },
+});
+</script>
+```
+
+```php
+use Ozmos\Viper\Attrs\Bind;
+
+return new class {
+    #[\Ozmos\Viper\Attrs\Prop]
+    public function user(#[Bind] User $user): UserDto
+    {
+        return UserDto::from($user);
+    }
+    
+    #[\Ozmos\Viper\Attrs\Action]
+    public function updateUser(#[Bind] User $user, UpdateUserDto $data): UserDto
+    {
+        $user->update($data->toArray());
+        return UserDto::from($user->fresh());
+    }
+    
+    // Custom column binding
+    #[\Ozmos\Viper\Attrs\Prop]
+    public function post(#[Bind(column: 'slug')] Post $post): PostDto
+    {
+        return PostDto::from($post);
+    }
+};
+```
+
 ## Calling Actions
 
 Actions are server-side functions that handle user interactions like form submissions, providing a type-safe way to mutate data.

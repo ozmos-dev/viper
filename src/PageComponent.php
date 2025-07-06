@@ -332,7 +332,36 @@ class PageComponent
             return null;
         }
 
-        return app()->call($actions[$name]->$name(...), $this->getParams());
+      $reflection = new \ReflectionClass($this->pageInstance());
+
+      $params = $this->getParams();
+      $headerColumns = str(request()->header('x-viper-bind-keys'))->explode(',');
+      $headerValues = str(request()->header('x-viper-bind-values'))->explode(',');
+
+      $method = $reflection->getMethod($name);
+
+      foreach ($method->getParameters() as $param) {
+        $attrs = $param->getAttributes(Bind::class);
+
+        if (empty($attrs)) {
+          continue;
+        }
+
+        $attr = $attrs[0]->newInstance();
+        $index = $headerColumns->search($param->getName());
+
+        if ($index === false) {
+          continue;
+        }
+
+        $model = $this->resolveModel($param->getType()->getName(), $headerValues[$index], $attr->column);
+
+        if ($model) {
+          $params[$param->getName()] = $model;
+        }
+      }
+
+        return app()->call($actions[$name]->$name(...), $params);
     }
 
     public function isIndex(): bool
