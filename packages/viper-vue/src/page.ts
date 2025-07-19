@@ -9,7 +9,6 @@ import {
   ref,
   toValue,
 } from "vue";
-import { useRouter } from "vue-router";
 
 type BaseBindings = string[];
 type BaseProps = Record<string, { result: unknown; bindings: BaseBindings }>;
@@ -164,7 +163,6 @@ export function usePage<P extends BasePageType>() {
   type Actions = P["actions"];
   type Params = P["params"];
   const page = inject("viperPage") as Page;
-  const router = useRouter();
 
   async function viperFetch({
     bind,
@@ -192,7 +190,7 @@ export function usePage<P extends BasePageType>() {
       boundHeaders["X-Viper-Bind-Keys"] = bindKeys.join(",");
       boundHeaders["X-Viper-Bind-Values"] = bindValues.join(",");
     }
-    const url = new URL(router.currentRoute.value.fullPath);
+    const url = new URL(window.location.href);
     if (qs) {
       for (const [key, value] of Object.entries(qs)) {
         const raw = toValue(value);

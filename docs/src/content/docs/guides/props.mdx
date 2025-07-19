@@ -94,7 +94,9 @@ return new class {
 
 ## Query String Parameters
 
-You can pass query string parameters to your props using the `qs` option.
+Query strings are automatically available from the current url in the browser but you can pass additional query string parameters using the `qs` option if needed. Properties passed to `qs` won't be added to the browsers URL, only the underlying query.
+
+Note that the values passed via `qs` won't be available in your php function on first page load, so this is only really recommended to be used for lazy props.
 
 <FrameworkTabsCode 
   filename="example"
