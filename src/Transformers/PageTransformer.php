@@ -48,7 +48,7 @@ class PageTransformer implements Transformer
                         $bindings[] = $param->getName();
                     }
                     $bindingType = json_encode($bindings);
-                    $propLines[] = "{$method->getName()}: { result: ".$returnType."; bindings: $bindingType }";
+                    $propLines[] = "{$method->getName()}: { result: " . $returnType . "; bindings: $bindingType }";
                 }
 
                 $actions = $method->getAttributes(Action::class);
@@ -83,7 +83,7 @@ class PageTransformer implements Transformer
         $returnType = $this->reflectionToTypeScript($method, $missingSymbols);
 
         $argType = 'any';
-          $bindings = [];
+        $bindings = [];
 
         foreach ($method->getparameters() as $parameter) {
             if ($parameter->getType()->isBuiltin()) {
@@ -93,7 +93,7 @@ class PageTransformer implements Transformer
             $attrs = $parameter->getAttributes(Bind::class);
 
             if (!empty($attrs)) {
-              $bindings[] = $parameter->getName();
+                $bindings[] = $parameter->getName();
             }
 
             $classReflect = new \ReflectionClass($parameter->getType()->getName());
@@ -104,7 +104,7 @@ class PageTransformer implements Transformer
             }
         }
 
-      $bindingType = json_encode($bindings);
+        $bindingType = json_encode($bindings);
 
         return "{$method->getName()}: { args: {$argType}; result: {$returnType}; bindings: $bindingType; }";
     }
