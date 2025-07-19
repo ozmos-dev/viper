@@ -1,0 +1,150 @@
+---
+title: Model / Container Injection
+---
+import FrameworkTabsCode from '../../../components/framework-tabs-code.astro'
+import FrameworkTabs from '../../../components/framework-tabs.astro'
+import {Aside} from "@astrojs/starlight/components";
+
+Props and Actions can take can inject dependencies just like regular Laravel controllers.
+
+```php
+use Ozmos\Viper\Attrs\Prop;
+use Illuminate\Http\Request;
+
+return new class {
+  #[Prop]
+  public function user(Request $request)
+  {
+    return $request->user();
+  }
+};
+```
+
+## Model Injection
+
+Models can be injected from the current URL just like Laravel's route model binding feature, or by using our `#[Bind]` attribute.
+
+### Route model binding
+
+You can configure how we resolve route model bindings in your `AppServiceProvider`.
+
+```php
+// app/Providers/AppServiceProvider.php
+
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Ozmos\Viper\Facades\Viper;
+
+class AppServiceProvider extends ServiceProvider
+{
+  public function boot(): void
+  {
+    // this is the default -> enabled and looks for models in the "\App\Models" namespace
+    Viper::autoDiscoverModels();
+
+    // you can also configure a custom namespace to look in
+    Viper::autoDiscoverModels("\\App\\V2\\Models");
+
+    // or disable model discovery completely
+    Viper::autoDiscoverModels(false);
+  }
+}
+```
+
+Then when you have a route parameter in your filename like `pages/posts/[post].php` if you typehint a model that matches the PascalCased version of the filename parameter we will inject it into your method.
+
+```php
+// resources/js/pages/posts/[post].php
+return new class {
+   #[\Ozmos\Viper\Attrs\Prop]
+   public function post(\App\Models\Post $post)
+   {
+     return $post;
+   }
+};
+```
+
+### The `Bind` attribute
+
+<Aside type={"tip"}>
+This works for both Props and Actions
+</Aside>
+
+Sometimes you need to inject a model that isn't reflected in the url.
+
+Say you have an `/admin/users` route that lists all the users and you want to show the details in a modal when one of them is clicked on instead of redirecting to a page like `/admin/users/{user}`. In this case we can tell Viper that we want a model resolved manually by using the `#[Bind]` attribute.
+
+
+```php
+use Ozmos\Viper\Attrs\Prop;
+use Ozmos\Viper\Attrs\Bind;
+use Illuminate\Http\Request;
+
+return new class {
+  #[Prop]
+  public function user(#[Bind] User $user)
+  {
+    return $user;
+  }
+};
+```
+
+Then in our frontend code we just need to pass the `bind` prop to our query. The key must be the same name as the php method parameter (typescript will also give you an error if you do not pass it correctly).
+
+<FrameworkTabs>
+<Fragment slot="vue">
+```vue
+<script setup lang={'ts'}>
+import { usePage } from '@ozmos/viper-vue';
+
+const page = usePage<ViperGen.AdminUsers>();
+
+const selectedUserId = ref(1);
+
+const { data: user } = page.useQuery('user', {
+  bind: {
+    user: selectedUserId,
+  },
+});
+</script>
+```
+</Fragment>
+<Fragment slot={'react'}>
+```tsx
+import { usePage } from '@ozmos/viper-react';
+import { useState } from 'react';
+
+export default function Page() {
+  const page = usePage<ViperGen.AdminUsers>();
+  const [selectedUserId, setSelectedUserId] = useState(1);
+
+  const { data: user } = page.useQuery('user', {
+    bind: {
+      user: selectedUserId,
+    },
+  });
+}
+```
+</Fragment>
+</FrameworkTabs>
+
+You can bind multiple models by adding multiple parameters to your function with bind attributes. Ensure that the method parameter name matches that of the frontend bind object keys.
+
+You can customise the column that is used to resolve the model. By default this is going to check the `id` attribute on the model but you can specify any column in the attribute:
+
+```php
+use Ozmos\Viper\Attrs\Prop;
+use Ozmos\Viper\Attrs\Bind;
+use Illuminate\Http\Request;
+
+return new class {
+  #[Prop]
+  public function post(#[Bind(column: 'slug')] Post $post)
+  {
+    return $post;
+  }
+};
+```

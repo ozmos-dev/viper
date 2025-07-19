@@ -7,6 +7,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Ozmos\Viper\Attrs\Action;
+use Ozmos\Viper\Attrs\Bind;
 use Ozmos\Viper\Attrs\Middleware;
 use Ozmos\Viper\Attrs\Name;
 use Ozmos\Viper\Attrs\Prop;
@@ -235,6 +236,8 @@ class PageComponent
         $props = [];
 
         $params = $this->getParams();
+        $headerColumns = str(request()->header('x-viper-bind-keys'))->explode(',');
+        $headerValues = str(request()->header('x-viper-bind-values'))->explode(',');
 
         foreach ($reflection->getMethods() as $method) {
             $attributes = $method->getAttributes(Prop::class);
@@ -254,6 +257,27 @@ class PageComponent
                 $props[$method->getName()] = null;
 
                 continue;
+            }
+
+            foreach ($method->getParameters() as $param) {
+                $attrs = $param->getAttributes(Bind::class);
+
+                if (empty($attrs)) {
+                    continue;
+                }
+
+                $attr = $attrs[0]->newInstance();
+                $index = $headerColumns->search($param->getName());
+
+                if ($index === false) {
+                    continue;
+                }
+
+                $model = $this->resolveModel($param->getType()->getName(), $headerValues[$index], $attr->column);
+
+                if ($model) {
+                    $params[$param->getName()] = $model;
+                }
             }
 
             $props[$method->getName()] = app()->call($instance->{$method->getName()}(...), $params);
@@ -308,7 +332,36 @@ class PageComponent
             return null;
         }
 
-        return app()->call($actions[$name]->$name(...), $this->getParams());
+      $reflection = new \ReflectionClass($this->pageInstance());
+
+      $params = $this->getParams();
+      $headerColumns = str(request()->header('x-viper-bind-keys'))->explode(',');
+      $headerValues = str(request()->header('x-viper-bind-values'))->explode(',');
+
+      $method = $reflection->getMethod($name);
+
+      foreach ($method->getParameters() as $param) {
+        $attrs = $param->getAttributes(Bind::class);
+
+        if (empty($attrs)) {
+          continue;
+        }
+
+        $attr = $attrs[0]->newInstance();
+        $index = $headerColumns->search($param->getName());
+
+        if ($index === false) {
+          continue;
+        }
+
+        $model = $this->resolveModel($param->getType()->getName(), $headerValues[$index], $attr->column);
+
+        if ($model) {
+          $params[$param->getName()] = $model;
+        }
+      }
+
+        return app()->call($actions[$name]->$name(...), $params);
     }
 
     public function isIndex(): bool
@@ -434,17 +487,13 @@ class PageComponent
         $params = [];
 
         $laravelParams = request()->route()?->parameters() ?? [];
+
         foreach ($laravelParams as $key => $value) {
-            $modelClass = Viper::resolveModel(str($key)->pascal()->toString());
-            if (class_exists($modelClass)) {
-                /** @var Model $inst */
-                $inst = new $modelClass();
-                $params[str($key)->camel()->toString()] = $inst->resolveRouteBinding($value);
+            $model = $this->resolveModel($key, $value);
 
-                continue;
+            if ($model) {
+                $params[$key] = $model;
             }
-
-            $params[$key] = $value;
         }
 
         // Handle wildcard parameters
@@ -454,6 +503,17 @@ class PageComponent
         }
 
         return $params;
+    }
+
+    private function resolveModel(string $key, string $value, string $column = 'id')
+    {
+        $modelClass = Viper::resolveModel(str($key)->pascal()->toString());
+        if (class_exists($modelClass)) {
+            /** @var Model $inst */
+            $inst = new $modelClass();
+            return $inst->resolveRouteBinding($value, $column);
+        }
+        return null;
     }
 
     public function getWildcardName()

@@ -1,7 +1,7 @@
 {
   "name": "@ozmos/viper-react",
   "description": "React plugin for Viper",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "typescript": "^5.8.3",
-    "@types/react": "^19.1.7"
+    "@types/react": "^19.1.7",
+    "tsd": "^0.32.0"
   }
 }

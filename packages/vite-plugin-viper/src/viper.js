@@ -6,7 +6,9 @@ import { createFilter } from "vite";
 
 const execAsync = promisify(exec);
 
-const PHP_REGEX = /<php>([\s\S]*?)<\/php>/g;
+const VUE_PHP_REGEX = /<php>([\s\S]*?)<\/php>/g;
+const REACT_PHP_REGEX =
+  /export\s+const\s+php\s*=\s*\/\*\*\s*@php\s*\*\/\s*`\s*(.*?)\s*`/gs;
 
 export class Viper {
   static instance = null;
@@ -30,6 +32,10 @@ export class Viper {
   }
 
   pageGlob() {
+    if (this.config.mode === "adjacent") {
+      return "**/*.php";
+    }
+
     if (this.config.framework === "react") {
       return "**/*.tsx";
     }
@@ -81,7 +87,14 @@ export class Viper {
       }
     }
 
-    return content.replace(PHP_REGEX, "");
+    if (this.config.mode === "adjacent") {
+      return content;
+    }
+
+    const regex =
+      this.config.framework === "react" ? REACT_PHP_REGEX : VUE_PHP_REGEX;
+
+    return content.replace(regex, "");
   }
 
   generate() {

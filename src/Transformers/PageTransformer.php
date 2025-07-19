@@ -4,6 +4,7 @@ namespace Ozmos\Viper\Transformers;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Ozmos\Viper\Attrs\Action;
+use Ozmos\Viper\Attrs\Bind;
 use Ozmos\Viper\Attrs\Prop;
 use Ozmos\Viper\Facades\Viper;
 use Ozmos\Viper\PageComponent;
@@ -34,7 +35,20 @@ class PageTransformer implements Transformer
                 $propAttributes = $method->getAttributes(Prop::class);
 
                 if (!empty($propAttributes)) {
-                    $propLines[] = "{$method->getName()}: {$this->reflectionToTypeScript($method, $missingSymbols)}";
+                    $returnType = $this->reflectionToTypeScript($method, $missingSymbols);
+                    $bindings = [];
+
+                    foreach ($method->getParameters() as $param) {
+                        $attrs = $param->getAttributes(Bind::class);
+
+                        if (empty($attrs)) {
+                            continue;
+                        }
+
+                        $bindings[] = $param->getName();
+                    }
+                    $bindingType = json_encode($bindings);
+                    $propLines[] = "{$method->getName()}: { result: ".$returnType."; bindings: $bindingType }";
                 }
 
                 $actions = $method->getAttributes(Action::class);
@@ -48,6 +62,9 @@ class PageTransformer implements Transformer
         $params = PageComponent::parseRouteParameters($class->getFileName())
             ->map(fn($key) => "{$key}: string")
             ->toArray();
+
+        // bindings = { colour: string|number, name: string|number; }
+        // loop over all
 
         $definition =
             '{ props: {' .
@@ -66,10 +83,19 @@ class PageTransformer implements Transformer
         $returnType = $this->reflectionToTypeScript($method, $missingSymbols);
 
         $argType = 'any';
+          $bindings = [];
+
         foreach ($method->getparameters() as $parameter) {
             if ($parameter->getType()->isBuiltin()) {
                 continue;
             }
+
+            $attrs = $parameter->getAttributes(Bind::class);
+
+            if (!empty($attrs)) {
+              $bindings[] = $parameter->getName();
+            }
+
             $classReflect = new \ReflectionClass($parameter->getType()->getName());
             if ($classReflect->isSubclassOf('\\Spatie\\LaravelData\\Data')) {
                 $argType = $missingSymbols->add($classReflect->getName());
@@ -78,6 +104,8 @@ class PageTransformer implements Transformer
             }
         }
 
-        return "{$method->getName()}: { args: {$argType}, result: {$returnType} }";
+      $bindingType = json_encode($bindings);
+
+        return "{$method->getName()}: { args: {$argType}; result: {$returnType}; bindings: $bindingType; }";
     }
 }

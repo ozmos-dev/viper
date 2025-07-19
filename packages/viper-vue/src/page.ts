@@ -1,9 +1,21 @@
 import { type QueryClient, useMutation, useQuery } from "@tanstack/vue-query";
-import { type Ref, inject, ref, toValue } from "vue";
-import { useRouter } from "vue-router";
+import {
+  type ComputedRef,
+  type MaybeRef,
+  type MaybeRefOrGetter,
+  type Ref,
+  computed,
+  inject,
+  ref,
+  toValue,
+} from "vue";
 
-type BaseProps = Record<string, unknown>;
-type BaseActions = Record<string, { args: unknown; result: unknown }>;
+type BaseBindings = string[];
+type BaseProps = Record<string, { result: unknown; bindings: BaseBindings }>;
+type BaseActions = Record<
+  string,
+  { args: unknown; result: unknown; bindings: BaseBindings }
+>;
 type BaseParams = Record<string, string>;
 
 interface BasePageType {
@@ -22,6 +34,81 @@ interface PageInit {
   queryClient: QueryClient;
 }
 
+type HeaderFunction = () => Promise<Record<string, string>>;
+
+// Helper types for conditional binding requirements
+type BindOptions<T extends { bindings: BaseBindings }> =
+  T["bindings"]["length"] extends 0
+    ? { bind?: never }
+    : {
+        bind: {
+          [K in T["bindings"][number]]:
+            | MaybeRef<string | number | null>
+            | ComputedRef<string | number | null>;
+        };
+      };
+
+// Type aliases for cleaner TanStack Query integration
+type QueryOptions<T> = Partial<Parameters<typeof useQuery<T>>[0]>;
+
+type QueryStringOptions = {
+  qs?: Record<string, MaybeRefOrGetter<string | number | unknown[] | null>>;
+};
+
+type MutationOptions<TResult, TArgs> = Parameters<
+  typeof useMutation<TResult, unknown, TArgs>
+>[0];
+
+// Clean parameter types for function signatures
+type UseQueryParams<T extends { bindings: BaseBindings; result: unknown }> =
+  T["bindings"]["length"] extends 0
+    ? [
+        options?: QueryOptions<T["result"]> &
+          BindOptions<T> &
+          QueryStringOptions,
+      ]
+    : [
+        options: QueryOptions<T["result"]> &
+          BindOptions<T> &
+          QueryStringOptions,
+      ];
+
+type UseMutationParams<
+  T extends { bindings: BaseBindings; result: unknown; args: unknown },
+> = T["bindings"]["length"] extends 0
+  ? [options?: MutationOptions<T["result"], T["args"]> & BindOptions<T>]
+  : [options: MutationOptions<T["result"], T["args"]> & BindOptions<T>];
+
+type UseFormParams<
+  T extends { bindings: BaseBindings; result: unknown; args: unknown },
+> = T["bindings"]["length"] extends 0
+  ? [
+      options?: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+      } & BindOptions<T>,
+    ]
+  : [
+      options: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+      } & BindOptions<T>,
+    ];
+
+type UseFormDataParams<
+  T extends { bindings: BaseBindings; result: unknown; args: unknown },
+> = T["bindings"]["length"] extends 0
+  ? [
+      options?: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+        files: string[];
+      } & BindOptions<T>,
+    ]
+  : [
+      options: MutationOptions<T["result"], T["args"]> & {
+        state: T["args"];
+        files: string[];
+      } & BindOptions<T>,
+    ];
+
 export class Page {
   params = ref<Record<string, string>>({});
   formatTitle = (title: string) => title;
@@ -29,12 +116,29 @@ export class Page {
   actions = {};
   hashes: Record<string, string> = {};
   queryClient: QueryClient;
+  headerFunctions: HeaderFunction[] = [];
 
   constructor(config: PageInit) {
     this.queryClient = config.queryClient;
     if (config.formatTitle) {
       this.formatTitle = config.formatTitle;
     }
+  }
+
+  mergeHeaders(func: HeaderFunction) {
+    this.headerFunctions.push(func);
+
+    return () => {
+      this.headerFunctions = this.headerFunctions.filter((f) => f !== func);
+    };
+  }
+
+  async getHeaders() {
+    const headers = await Promise.all(
+      this.headerFunctions.map((func) => func()),
+    );
+
+    return headers.reduce((acc, header) => ({ ...acc, ...header }), {});
   }
 
   updateFromPageJson(json: BasePage) {
@@ -59,28 +163,101 @@ export function usePage<P extends BasePageType>() {
   type Actions = P["actions"];
   type Params = P["params"];
   const page = inject("viperPage") as Page;
-  const router = useRouter();
+
+  async function viperFetch({
+    bind,
+    body,
+    headers,
+    method = "GET",
+    qs = {},
+  }: {
+    bind?: Record<string, unknown>;
+    body?: string | FormData;
+    headers?: Record<string, string>;
+    method?: string;
+    qs?: Pick<QueryStringOptions, "qs">["qs"];
+  }) {
+    const boundHeaders: Record<string, string> = {};
+    const bindKeys = [];
+    const bindValues = [];
+    for (const [key, value] of Object.entries(bind ?? {})) {
+      if (toValue(value)) {
+        bindKeys.push(key);
+        bindValues.push(toValue(value));
+      }
+    }
+    if (bindKeys.length > 0) {
+      boundHeaders["X-Viper-Bind-Keys"] = bindKeys.join(",");
+      boundHeaders["X-Viper-Bind-Values"] = bindValues.join(",");
+    }
+    const url = new URL(window.location.href);
+    if (qs) {
+      for (const [key, value] of Object.entries(qs)) {
+        const raw = toValue(value);
+        if (Array.isArray(raw)) {
+          for (const item of raw) {
+            url.searchParams.append(`${key}[]`, String(item));
+          }
+        } else {
+          url.searchParams.set(key, String(raw));
+        }
+      }
+    }
+    return fetch(url.toString(), {
+      method,
+      credentials: "include",
+      headers: {
+        ...(await page.getHeaders()),
+        ...headers,
+        ...boundHeaders,
+        ...(body instanceof FormData
+          ? {}
+          : {
+              "Content-Type": "application/json",
+            }),
+        Accept: "application/json",
+        "X-Viper-Request": "true",
+        "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
+      },
+      body,
+    });
+  }
 
   return {
     setPageTitle: page.setPageTitle,
 
     params: page.params as Ref<Params>,
 
-    useQuery<K extends keyof Props>(key: K) {
+    useQuery<K extends keyof Props>(key: K, ...args: UseQueryParams<Props[K]>) {
+      const options = args[0];
+      const { bind, qs, ...opts } = options ?? {};
       const enabled = ref(false);
+      const queryKey = computed(() => {
+        return [
+          page.hashes[key as string],
+          ...Object.entries(bind ?? {})
+            .map(([key, value]) => `bind:${key}:${toValue(value)}`)
+            .filter(Boolean),
+          ...(qs
+            ? Object.entries(qs).map(
+                ([key, value]) => `qs:${key}:${toValue(value)}`,
+              )
+            : []),
+        ];
+      });
 
-      const query = useQuery<Props[K]>({
+      const query = useQuery<Props[K]["result"]>({
+        ...opts,
         enabled,
-        initialData: () => page.props[key as string] as Props[K],
-        queryKey: [page.hashes[key as string]],
+        initialData: () => page.props[key as string] as Props[K]["result"],
+        queryKey,
         queryFn: async () => {
-          const res = await fetch(router.currentRoute.value.path, {
+          const res = await viperFetch({
+            bind,
             headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Only": key as string,
             },
+            qs,
           });
           enabled.value = true;
           if (!res.ok) {
@@ -91,52 +268,45 @@ export function usePage<P extends BasePageType>() {
         },
       });
 
-      // for some reason data is always | null | undefined even when specifying initialData so this is a workaround
-      type IsAny<T> = 0 extends 1 & T ? true : false;
+      // Trust that initialData makes this non-null and preserve TanStack Query's return type
       return {
         ...query,
-        data: query.data as IsAny<Props[K]> extends true
-          ? any
-          : Ref<Readonly<Props[K]>>,
+        data: query.data as Ref<Props[K]["result"]>,
       };
     },
 
-    useMutation(
-      key: keyof Actions,
-      options: Parameters<
-        typeof useMutation<
-          Actions[typeof key]["result"],
-          unknown,
-          Actions[typeof key]["args"]
-        >
-      >[0] = {},
+    useMutation<K extends keyof Actions>(
+      key: K,
+      ...args: UseMutationParams<Actions[K]>
     ) {
-      type Result = Actions[typeof key]["result"];
-      type Args = Actions[typeof key]["args"];
+      const options = args[0] || { bind: {} };
+      type Result = Actions[K]["result"];
+      type Args = Actions[K]["args"];
+      const { bind, ...mutationOptions } = options;
 
       return useMutation<Result, unknown, Args>({
-        ...options,
+        ...mutationOptions,
         mutationFn: async (data = {}) => {
-          const res = await fetch(router.currentRoute.value.path, {
+          const res = await viperFetch({
             method: "POST",
-            credentials: "include",
-            body: JSON.stringify(data),
+            bind,
+            body: data instanceof FormData ? data : JSON.stringify(data),
             headers: {
+              ...(data instanceof FormData
+                ? {}
+                : { "Content-Type": "application/json" }),
               Accept: "application/json",
-              "Content-Type": "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Action": key as string,
-              "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
             },
           });
+          if (res.status === 422) {
+            const data = (await res.json()) as {
+              message: string;
+              errors: Record<string, string[]>;
+            };
+            throw data.errors;
+          }
           if (!res.ok) {
-            if (res.status === 422) {
-              const data = (await res.json()) as {
-                message: string;
-                errors: Record<string, string[]>;
-              };
-              throw data.errors;
-            }
             throw await res.json();
           }
           return (await res.json()) as Result;
@@ -144,58 +314,51 @@ export function usePage<P extends BasePageType>() {
       });
     },
 
-    useForm(
-      key: keyof Actions,
-      options: Parameters<
-        typeof useMutation<
-          Actions[typeof key]["result"],
-          unknown,
-          Actions[typeof key]["args"]
-        >
-      >[0] & {
-        state: Actions[typeof key]["args"];
-      },
+    useForm<K extends keyof Actions>(
+      key: K,
+      ...args: UseFormParams<Actions[K]>
     ) {
-      type Result = Actions[typeof key]["result"];
-      type Args = Actions[typeof key]["args"];
+      const options =
+        args[0] ||
+        ({} as MutationOptions<Actions[K]["result"], Actions[K]["args"]> & {
+          state: Actions[K]["args"];
+        } & BindOptions<Actions[K]>);
+      type Result = Actions[K]["result"];
+      type Args = Actions[K]["args"];
+      const { bind, state: initialState, ...mutationOptions } = options;
 
-      const _initialState = { ...toValue(options.state ?? {}) };
-      const state = ref(options.state);
+      const _initialState = { ...toValue(initialState ?? {}) };
+      const state = ref(initialState);
       const errors = ref<Record<string, string>>({});
 
       const mutation = useMutation<Result, unknown, Args>({
-        ...options,
+        ...mutationOptions,
         mutationFn: async (data = {}) => {
           errors.value = {};
 
-          const res = await fetch(router.currentRoute.value.path, {
+          const res = await viperFetch({
             method: "POST",
-            credentials: "include",
+            bind,
             body: JSON.stringify({
               ...toValue(state),
               ...toValue(data ?? {}),
             }),
             headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Action": key as string,
-              "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
             },
           });
+          if (res.status === 422) {
+            const data = (await res.json()) as {
+              message: string;
+              errors: Record<string, string[]>;
+            };
+            errors.value = Object.entries(data.errors).reduce(
+              (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
+              {},
+            );
+            throw data.errors;
+          }
           if (!res.ok) {
-            if (res.status === 422) {
-              const data = (await res.json()) as {
-                message: string;
-                errors: Record<string, string[]>;
-              };
-              errors.value = Object.entries(data.errors).reduce(
-                // biome-ignore lint/performance/noAccumulatingSpread: it's fine here
-                (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
-                {},
-              );
-              throw data.errors;
-            }
             throw await res.json();
           }
           return (await res.json()) as Result;
@@ -204,10 +367,10 @@ export function usePage<P extends BasePageType>() {
 
       return {
         ...mutation,
-        mutate(override: Args = {}) {
+        mutate(override: Partial<Args> = {}) {
           return mutation.mutate(override);
         },
-        mutateAsync(override: Args = {}) {
+        mutateAsync(override: Partial<Args> = {}) {
           return mutation.mutateAsync(override);
         },
         reset: () => {
@@ -217,29 +380,26 @@ export function usePage<P extends BasePageType>() {
         state,
       };
     },
-    useFormData(
-      key: keyof Actions,
-      options: Parameters<
-        typeof useMutation<
-          Actions[typeof key]["result"],
-          unknown,
-          Actions[typeof key]["args"]
-        >
-      >[0] & {
-        state: Actions[typeof key]["args"];
-        // todo: how can we auto detect this?
-        files: string[];
-      },
+    useFormData<K extends keyof Actions>(
+      key: K,
+      ...args: UseFormDataParams<Actions[K]>
     ) {
-      type Result = Actions[typeof key]["result"];
-      type Args = Actions[typeof key]["args"];
+      const options =
+        args[0] ||
+        ({} as MutationOptions<Actions[K]["result"], Actions[K]["args"]> & {
+          state: Actions[K]["args"];
+          files: string[];
+        } & BindOptions<Actions[K]>);
+      type Result = Actions[K]["result"];
+      type Args = Actions[K]["args"];
+      const { bind, state: initialState, files, ...mutationOptions } = options;
 
-      const _initialState = { ...toValue(options.state ?? {}) };
-      const state = ref(options.state);
+      const _initialState = { ...toValue(initialState ?? {}) };
+      const state = ref(initialState);
       const errors = ref<Record<string, string>>({});
 
       const mutation = useMutation<Result, unknown, Args>({
-        ...options,
+        ...mutationOptions,
         mutationFn: async (data = {}) => {
           errors.value = {};
 
@@ -250,10 +410,10 @@ export function usePage<P extends BasePageType>() {
 
           const formData = new FormData();
 
-          for (const key of options.files) {
+          for (const key of files) {
             if (Array.isArray(json[key])) {
               for (const file of json[key]) {
-                formData.append(key, file);
+                formData.append(`${key}[]`, file);
               }
             } else if (json[key]) {
               formData.set(key, json[key]);
@@ -263,30 +423,27 @@ export function usePage<P extends BasePageType>() {
 
           formData.set("state", JSON.stringify(json));
 
-          const res = await fetch(router.currentRoute.value.path, {
+          const res = await viperFetch({
             method: "POST",
-            credentials: "include",
             body: formData,
+            bind,
             headers: {
-              Accept: "application/json",
-              "X-Viper-Request": "true",
               "X-Viper-Action": key as string,
-              "X-XSRF-TOKEN": decodeURIComponent(getXsrfToken() || ""),
             },
           });
+
+          if (res.status === 422) {
+            const data = (await res.json()) as {
+              message: string;
+              errors: Record<string, string[]>;
+            };
+            errors.value = Object.entries(data.errors).reduce(
+              (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
+              {},
+            );
+            throw data.errors;
+          }
           if (!res.ok) {
-            if (res.status === 422) {
-              const data = (await res.json()) as {
-                message: string;
-                errors: Record<string, string[]>;
-              };
-              errors.value = Object.entries(data.errors).reduce(
-                // biome-ignore lint/performance/noAccumulatingSpread: it's fine here
-                (acc, [key, value]) => ({ ...acc, [key]: value[0] }),
-                {},
-              );
-              throw data.errors;
-            }
             throw await res.json();
           }
           return (await res.json()) as Result;
@@ -295,10 +452,10 @@ export function usePage<P extends BasePageType>() {
 
       return {
         ...mutation,
-        mutate(override: Args = {}) {
+        mutate(override: Partial<Args> = {}) {
           return mutation.mutate(override);
         },
-        mutateAsync(override: Args = {}) {
+        mutateAsync(override: Partial<Args> = {}) {
           return mutation.mutateAsync(override);
         },
         reset: () => {

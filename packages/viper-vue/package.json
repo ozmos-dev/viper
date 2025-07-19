@@ -1,7 +1,7 @@
 {
   "name": "@ozmos/viper-vue",
   "description": "Vue plugin for Viper",
-  "version": "0.1.1",
+  "version": "0.3.0",
   "private": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,6 +20,7 @@
     "vue": "^3.5.14"
   },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "tsd": "^0.32.0"
   }
 }
