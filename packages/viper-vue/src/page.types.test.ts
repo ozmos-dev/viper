@@ -1,4 +1,5 @@
 import { expectType } from "tsd";
+import { ref } from "vue";
 import { usePage } from "./page";
 
 type PageTest = {
@@ -101,6 +102,18 @@ page.useQuery("multiBindingProp", {
 const anyQuery = page.useQuery("anyProp");
 // since the prop is any we should be able to freely chain off it without errors
 anyQuery.data.value.something.other;
+
+// can pass qs to useQuery
+page.useQuery("scalarProp", {
+  qs: {
+    something: ref("1"),
+    other: 1,
+    maybe: null,
+    array: [1, 2, 3],
+    // @ts-expect-error - object not allowed
+    object: { a: 1, b: 2 },
+  },
+});
 
 // no types provided so we can pass anything to mutate and data
 const noTypeMutation = page.useMutation("noTypes", {

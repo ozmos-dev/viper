@@ -47,6 +47,10 @@ type BindOptions<T extends { bindings: BaseBindings }> =
 // Type aliases for cleaner TanStack Query integration
 type QueryOptions<T> = Partial<Parameters<typeof useQuery<T>>[0]>;
 
+type QueryStringOptions = {
+  qs?: Record<string, string | number | unknown[] | null>;
+};
+
 type MutationOptions<TResult, TArgs> = Parameters<
   typeof useMutation<TResult, unknown, TArgs>
 >[0];
@@ -54,8 +58,16 @@ type MutationOptions<TResult, TArgs> = Parameters<
 // Clean parameter types for function signatures
 type UseQueryParams<T extends { bindings: BaseBindings; result: unknown }> =
   T["bindings"]["length"] extends 0
-    ? [options?: QueryOptions<T["result"]> & BindOptions<T>]
-    : [options: QueryOptions<T["result"]> & BindOptions<T>];
+    ? [
+        options?: QueryOptions<T["result"]> &
+          BindOptions<T> &
+          QueryStringOptions,
+      ]
+    : [
+        options: QueryOptions<T["result"]> &
+          BindOptions<T> &
+          QueryStringOptions,
+      ];
 
 type UseMutationParams<
   T extends { bindings: BaseBindings; result: unknown; args: unknown },
@@ -237,11 +249,13 @@ export function usePage<P extends BasePageType>() {
     body,
     headers,
     method = "GET",
+    qs = {},
   }: {
     bind?: Record<string, unknown>;
     body?: string | FormData;
     headers?: Record<string, string>;
     method?: string;
+    qs?: Pick<QueryStringOptions, "qs">["qs"];
   }) {
     const boundHeaders: Record<string, string> = {};
     const bindKeys = [];
@@ -256,7 +270,19 @@ export function usePage<P extends BasePageType>() {
       boundHeaders["X-Viper-Bind-Keys"] = bindKeys.join(",");
       boundHeaders["X-Viper-Bind-Values"] = bindValues.join(",");
     }
-    return fetch(window.location.pathname, {
+    const url = new URL(window.location.href);
+    if (qs) {
+      for (const [key, value] of Object.entries(qs)) {
+        if (Array.isArray(value)) {
+          for (const item of value) {
+            url.searchParams.append(`${key}[]`, String(item));
+          }
+        } else {
+          url.searchParams.set(key, String(value));
+        }
+      }
+    }
+    return fetch(url.toString(), {
       method,
       credentials: "include",
       headers: {
@@ -283,16 +309,21 @@ export function usePage<P extends BasePageType>() {
 
     useQuery<K extends keyof Props>(key: K, ...args: UseQueryParams<Props[K]>) {
       const options = args[0];
-      const { bind, ...opts } = options ?? {};
+      const { bind, qs, ...opts } = options ?? {};
       const [enabled, setEnabled] = useState(false);
       const queryKey = useMemo(() => {
         return [
           page.hashes[key as string],
           ...Object.entries(bind ?? {})
-            .map(([key, value]) => `${key}:${value}`)
+            .map(([key, value]) => `bind:${key}:${value}`)
             .filter(Boolean),
+          ...(qs
+            ? Object.entries(qs).map(
+                ([key, value]) => `qs:${key}:${value}`,
+              )
+            : []),
         ];
-      }, [key, bind]);
+      }, [key, bind, qs]);
 
       const query = useQuery<Props[K]["result"]>({
         ...opts,
@@ -305,6 +336,7 @@ export function usePage<P extends BasePageType>() {
             headers: {
               "X-Viper-Only": key as string,
             },
+            qs,
           });
           setEnabled(true);
           if (!res.ok) {

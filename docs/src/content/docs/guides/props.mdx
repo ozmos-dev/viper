@@ -92,6 +92,63 @@ return new class {
 `}
 />
 
+## Query String Parameters
+
+You can pass query string parameters to your props using the `qs` option.
+
+<FrameworkTabsCode 
+  filename="example"
+  vue={`
+<script setup lang="ts">
+import { usePage } from '@ozmos/viper-vue';
+import { ref } from 'vue';
+
+const page = usePage<ViperGen.Example>();
+const search = ref('');
+
+const { data: results } = page.useQuery('searchResults', {
+  qs: {
+    q: search,
+    limit: 10,
+    tags: ['active', 'featured']
+  }
+});
+</script>
+`}
+  react={`
+import { usePage } from '@ozmos/viper-react';
+import { useState } from 'react';
+
+export default function Example() {
+   const page = usePage<ViperGen.Example>();
+   const [search, setSearch] = useState('');
+
+   const { data: results } = page.useQuery('searchResults', {
+     qs: {
+       q: search,
+       limit: 10,
+       tags: ['active', 'featured']
+     }
+   });
+
+   return null;
+}
+`}
+  php={`
+return new class {
+   #[\\Ozmos\\Viper\\Attrs\\Prop]
+   public function searchResults(\\Illuminate\\Http\\Request $request): array
+   {
+     $query = $request->get('q');
+     $limit = $request->get('limit', 20);
+     $tags = $request->get('tags', []);
+     
+     return Post::search($query)->limit($limit)->get();
+   }
+};
+`}
+/>
+
 ## Lazy Loading
 
 If you don't want to fetch the prop on the first visit of the page you can pass `lazy: true` to the attribute.

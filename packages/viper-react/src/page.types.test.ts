@@ -100,7 +100,7 @@ page.useQuery("multiBindingProp", {
 
 const anyQuery = page.useQuery("anyProp");
 // since the prop is any we should be able to freely chain off it without errors
-anyQuery.data.value.something.other;
+anyQuery.data.something.other;
 
 // no types provided so we can pass anything to mutate and data
 const noTypeMutation = page.useMutation("noTypes", {
@@ -165,7 +165,7 @@ page.useMutation("bindings", {
 });
 
 // @ts-expect-error - param key doesnt exist
-void page.params.value.other;
+void page.params.other;
 
 expectType<string>(page.params.something);
 
@@ -192,3 +192,15 @@ multipleArgsForm.mutate();
 
 // allows overriding only a single field
 multipleArgsForm.mutate({ one: 1 });
+
+// can pass qs to useQuery
+page.useQuery("scalarProp", {
+  qs: {
+    something: "1",
+    other: 1,
+    maybe: null,
+    array: [1, 2, 3],
+    // @ts-expect-error - object not allowed
+    object: { a: 1, b: 2 },
+  },
+});
