@@ -1,17 +1,13 @@
 {
-  "name": "docs",
-  "type": "module",
-  "version": "0.0.1",
+  "name": "viper-docs",
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+    "dev": "docus dev",
+    "build": "docus build"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.34.3",
-    "astro": "^5.9.2",
-    "sharp": "^0.32.6"
+    "better-sqlite3": "^11.10.0",
+    "docus": "latest",
+    "nuxt": "^3.17.6",
+    "nuxt-llms": "^0.1.3"
   }
 }
