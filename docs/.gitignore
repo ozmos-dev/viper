@@ -1,21 +1,40 @@
-# build output
-dist/
-# generated types
-.astro/
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
 
-# dependencies
-node_modules/
+# Node dependencies
+node_modules
 
-# logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# Logs
+logs
+*.log
 
-
-# environment variables
-.env
-.env.production
-
-# macOS-specific files
+# Misc
 .DS_Store
+.fleet
+.idea
+.eslintcache
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Template
+template/pnpm-lock.yaml
+
+# npm pack
+*.tgz
+
+# Temp files
+.tmp
+.profile
+*.0x
+
+#VSC
+.history
+.wrangler

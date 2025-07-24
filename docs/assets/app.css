@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@import "@nuxt/ui-pro";
+
+@source "../content/**/*";
+@source "../node_modules/docus/app/**/*";
+
+pre {
+    white-space: pre !important;
+}
