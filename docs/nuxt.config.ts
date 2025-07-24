@@ -3,6 +3,10 @@ import { defineNuxtConfig } from "nuxt/config";
 export default defineNuxtConfig({
   css: ["./assets/app.css"],
   modules: ["nuxt-llms"],
+  ssr: false,
+  ogImage: {
+    enabled: false,
+  },
   llms: {
     domain: "https://viper.ozmos.dev",
     title: "Viper",
